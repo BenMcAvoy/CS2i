@@ -148,6 +148,7 @@
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="sdk-gen.h" />
     <ClInclude Include="sdk.h" />
     <ClInclude Include="vendor\imgui\CompiledShaderPS.hpp" />
     <ClInclude Include="vendor\imgui\CompiledShaderVS.hpp" />

@@ -10,6 +10,7 @@
 #include <string>
 #include <ranges>
 #include <functional>
+#include <filesystem>
 
 #include <imgui.h>
 #include <imgui_impl_win32.h>
@@ -29,6 +30,34 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 	} while (0)
 
 namespace CS2 {
+	using byte = uint8_t;
+	using byte_t = uint8_t;
+	using uint = unsigned int;
+	using ulong = unsigned long;
+	using uchar = unsigned char;
+	using ushort = unsigned short;
+	using float32 = float;
+	using float64 = double;
+	using GameTime_t = double;
+	using GameTick_t = int32_t;
+
+	using int8 = int8_t;
+	using int16 = int16_t;
+	using int32 = int32_t;
+	using int64 = int64_t;
+
+	using uint8 = uint8_t;
+	using uint16 = uint16_t;
+	using uint32 = uint32_t;
+	using uint64 = uint64_t;
+
+	// TODO: Get these automatically instead of hardcoding
+	namespace Offsets {
+		uintptr_t dwEntityList = *reinterpret_cast<uintptr_t*>(
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1D07A80
+			);
+	} // namespace Offsets
+
 	using DXGIPresentFn_t = HRESULT(__stdcall*)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
 	DXGIPresentFn_t dxgiPresentFn = nullptr;
 	DXGIPresentFn_t originalDXGIPresent = nullptr;
@@ -36,9 +65,10 @@ namespace CS2 {
 	using ConMsgFn_t = void(__stdcall*)(const char* fmt, ...);
 	ConMsgFn_t ConMsg = nullptr;
 
-	HRESULT __stdcall hookedDXGIPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
-		ConMsg("CS2i: DXGI Present hooked!");
-		return originalDXGIPresent(pSwapChain, SyncInterval, Flags);
+	template <int Index, typename ReturnType, typename... Args>
+	inline ReturnType CallVFunc(void* pThis, Args... args) {
+		using func = ReturnType(__thiscall*)(void*, Args...);
+		return (*(func**)(pThis))[Index](pThis, args...);
 	}
 
 	using FNV1A_t = uint64_t;
@@ -217,6 +247,14 @@ namespace CS2 {
 				ImGui_ImplWin32_Init(hWnd);
 				ImGui_ImplDX11_Init(pDevice, pContext);
 
+				constexpr auto path = R"(C:\Users\Ben\AppData\Local\Microsoft\Windows\Fonts\JetBrainsMonoNerdFont-Regular.ttf)";
+				if (std::filesystem::exists(path)) {
+					io.Fonts->AddFontFromFileTTF(path, 16.0f);
+					io.Fonts->Build();
+				} else {
+					io.Fonts->AddFontDefault();
+				}
+
 				originalWndProc = SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
 				hWnd_ = hWnd;
@@ -253,15 +291,37 @@ namespace CS2 {
 		// TODO
 	}
 
-	class IEngineClient;
+	class C_BaseEntity;
+	class IEngineClient {
+	public:
+		int maxClients() {
+			return CallVFunc<34u, int>(this);
+		}
+
+		bool shouldBeTrue() {
+			return CallVFunc<10u, bool>(this);
+		}
+
+		bool isPlayerInputEnabled() {
+			return CallVFunc<11u, bool>(this);
+		}
+
+		C_BaseEntity* getBaseEntByIndex(int index) {
+			return CallVFunc<22u, C_BaseEntity*>(this, index);
+		}
+	};
 	class ISchemaSystem;
-	class IGameResourceService;
+	class IGameResourceService {
+	private:
+		/* 0x0000 */ char pad_0x0000[0x20F0];
+	public:
+		/* 0x20F0 */ int highestEntityIndex;
+	};
 	class IMatchmaking;
 	class CTraceManager;
 
 	using InstantiateInterfaceFn_t = void* (*)();
 
-	// [x]
 	class CInterfaceRegister {
 	public:
 		InstantiateInterfaceFn_t fnCreate;
@@ -309,7 +369,6 @@ namespace CS2 {
 		}
 	};
 
-	// [x]
 	namespace Interfaces {
 		inline IEngineClient* GEngineClient = nullptr;
 		inline ISchemaSystem* GSchemaSystem = nullptr;
@@ -344,17 +403,24 @@ namespace CS2 {
 
 	class CSchemaSystemTypeScope;
 	class CSchemaType;
-	struct SchemaBaseClassInfoData_t;
 	struct SchemaStaticFieldData_t;
 	struct SchemaClassInfoData;
+	struct SchemaBaseClass {
+		/* 0x000 */ char pd_0x0[0x10];
+		/* 0x010 */ const char* name;
+	};
 
-	// Full definition moved up so SchemaClassInfoData_t can use it.
+	struct SchemaBaseClassInfoData_t {
+		/* 0x000 */ char pad_0x0[0x18];
+		/* 0x018 */ SchemaBaseClass* info;
+	};
+
 	struct SchemaClassFieldData_t {
-		const char* fieldName;  // 0x00
-		CSchemaType* schemaType; // 0x08
-		int32_t          offset;     // 0x10
-		int32_t          pad0;         // 0x14
-		int64_t          pad1;         // 0x18
+		/* 0x000 */ const char* fieldName;
+		/* 0x008 */ CSchemaType* schemaType;
+		/* 0x010 */ int32_t offset;
+		/* 0x014 */ int32_t pad0;
+		/* 0x018 */ int64_t pad1;
 	};
 
 	struct SchemaData_t {
@@ -376,18 +442,6 @@ namespace CS2 {
 		std::span<T> ToSpan() {
 			return std::span<T>(m_Elements, m_Size);
 		}
-	};
-
-	template <int Index, typename ReturnType, typename... Args>
-	inline ReturnType CallVFunc(void* pThis, Args... args) {
-		using func = ReturnType(__thiscall*)(void*, Args...);
-		LOGINFO("Calling vfunc index %d", Index);
-		return (*(func**)(pThis))[Index](pThis, args...);
-	}
-
-	struct SchemaBaseClassInfoData_t {
-		uint64_t               pad0;        // 0x00
-		SchemaClassInfoData* classInfo; // 0x08
 	};
 
 	enum class SchemaTypeCategory : uint8_t {
@@ -459,8 +513,21 @@ namespace CS2 {
 		/* 0x500 */ CUtlTsHash<SchemaClassInfoData> declaredClasses;
 
 	public:
-		// Virtual function to find a declared class by name
+		// Find a declared class by name
 		SchemaClassInfoData* FindDeclaredClass(const char* className) {
+			if (!className)
+				return nullptr;
+
+			FNV1A_t hash = Hash(className);
+
+			// Iterate through the hash table to find the class
+			for (auto& classInfo : declaredClasses) {
+				if (classInfo.name && strcmp(classInfo.name, className) == 0) {
+					return &classInfo;
+				}
+			}
+
+			return nullptr;
 		}
 	};
 
@@ -478,25 +545,41 @@ namespace CS2 {
 		}
 	};
 
-
 	struct SchemaStaticFieldData_t {
-		const char* fieldName;  // 0x0000
-		CSchemaType* schemaType; // 0x0008
-		void* instance;   // 0x0010
+		/* 0x000 */ const char* fieldName; 
+		/* 0x008 */ CSchemaType* schemaType;
+		/* 0x010 */ void* instance;
 
-		uint64_t pad_0x18; // 0x0018
-		uint64_t pad_0x20; // 0x0020
+		/* 0x018 */ uint64_t pad_0x18;
+		/* 0x020 */ uint64_t pad_0x20;
 	};
 
 	namespace schemas {
 		inline int32_t GetSchemaOffset(const char* moduleName, const char* className, const char* fieldName) {
-			/*SchemaClassInfoData_t* classInfo = Interfaces::GSchemaSystem->FindTypeScopeForModule(moduleName)->FindDeclaredClass(className);
+			if (!Interfaces::GSchemaSystem) {
+				LOGINFO("SchemaSystem not initialized!");
+				return 0;
+			}
+
+			CSchemaSystemTypeScope* typeScope = Interfaces::GSchemaSystem->FindTypeScopeForModule(moduleName);
+			if (!typeScope) {
+				LOGINFO("Failed to find type scope for module: %s", moduleName);
+				return 0;
+			}
+
+			SchemaClassInfoData* classInfo = typeScope->FindDeclaredClass(className);
+			if (!classInfo) {
+				LOGINFO("Failed to find class: %s", className);
+				return 0;
+			}
+
 			for (int16_t i = 0; i < classInfo->fieldsCount; i++) {
 				if (std::string(fieldName) == classInfo->fields[i].fieldName) {
 					return classInfo->fields[i].offset;
 				}
-			}*/
+			}
 
+			LOGINFO("Failed to find field: %s in class: %s", fieldName, className);
 			return 0;
 		}
 
@@ -513,7 +596,7 @@ namespace CS2 {
 
 #define SCHEMA(type, name, field_name, class_name, module_name)                                               \
 		std::add_lvalue_reference_t<type> name() {                                                                \
-	        return *(type *)((uint64_t)this + schemas::GetSchemaOffset(_X(module_name), _X(class_name), _X(field_name))); \
+	        return *(type *)((uint64_t)this + schemas::GetSchemaOffset(module_name, class_name, field_name)); \
 		}
 
 #define SCHEMA_ADD_OFFSET(TYPE, NAME, OFFSET)                                                                 \
@@ -528,8 +611,193 @@ namespace CS2 {
 			return reinterpret_cast<std::add_pointer_t<TYPE>>(reinterpret_cast<std::uint8_t*>(this) + (uOffset)); \
 		}
 
-#define SCHEMA_ADD_FIELD_OFFSET(TYPE, NAME, FIELD, ADDITIONAL) SCHEMA_ADD_OFFSET(TYPE, NAME, schemas::GetOffset(FNV1A::HashConst(FIELD)) + ADDITIONAL)
+#define SCHEMA_ADD_FIELD_OFFSET(TYPE, NAME, FIELD, ADDITIONAL) SCHEMA_ADD_OFFSET(TYPE, NAME, schemas::GetOffset(CS2::HashConst(FIELD)) + ADDITIONAL)
 #define SCHEMA_ADD_FIELD(TYPE, NAME, FIELD) SCHEMA_ADD_FIELD_OFFSET(TYPE, NAME, FIELD, 0U)
-#define SCHEMA_ADD_PFIELD_OFFSET(TYPE, NAME, FIELD, ADDITIONAL) SCHEMA_ADD_POFFSET(TYPE, NAME, schemas::GetOffset(FNV1A::HashConst(FIELD)) + ADDITIONAL)
+#define SCHEMA_ADD_PFIELD_OFFSET(TYPE, NAME, FIELD, ADDITIONAL) SCHEMA_ADD_POFFSET(TYPE, NAME, schemas::GetOffset(CS2::HashConst(FIELD)) + ADDITIONAL)
 #define SCHEMA_ADD_PFIELD(TYPE, NAME, FIELD) SCHEMA_ADD_PFIELD_OFFSET(TYPE, NAME, FIELD, 0U)
+
+	// Main SDK. All above is for schema reflection and hooking...
+
+#define INVALID_EHANDLE_INDEX 0xFFFFFFFF
+#define ENT_ENTRY_MASK 0x7FFF
+#define NUM_SERIAL_NUM_SHIFT_BITS 15
+#define ENT_MAX_NETWORKED_ENTRY 16384
+
+	class CHandle {
+	public:
+		CHandle() : index(INVALID_EHANDLE_INDEX) {}
+		CHandle(const int nEntry, const int nSerial) noexcept {
+			index = nEntry | (nSerial << NUM_SERIAL_NUM_SHIFT_BITS);
+		}
+		CHandle(const uint32_t nIndex) noexcept : index(nIndex) {}
+
+		bool operator==(const CHandle& other) const noexcept {
+			return index == other.index;
+		}
+
+		bool IsValid() const noexcept {
+			return index != INVALID_EHANDLE_INDEX;
+		}
+
+		int GetEntryIndex() const noexcept {
+			if (!IsValid())
+				return ENT_ENTRY_MASK;
+			return index & ENT_ENTRY_MASK;
+		}
+
+		int GetSerialNumber() const noexcept {
+			if (!IsValid())
+				return 0;
+			return index >> NUM_SERIAL_NUM_SHIFT_BITS;
+		}
+
+		uint32_t GetIndex() const noexcept {
+			return index;
+		}
+
+	private:
+		uint32_t index;
+	};
+
+	class CEntityList {
+	public:
+		template<typename T = void>
+		static T* GetEntityByHandle(const CHandle& handle) noexcept {
+			if (!handle.IsValid())
+				return nullptr;
+
+			return GetEntityByIndex<T>(handle.GetEntryIndex());
+		}
+
+		template<typename T = void>
+		static T* GetEntityByIndex(int entryIndex) noexcept {
+			int chunkIndex = entryIndex >> 9;
+			int chunkOffset = entryIndex & 0x1FF;
+
+			uintptr_t list = *reinterpret_cast<uintptr_t*>(Offsets::dwEntityList + (8 * chunkIndex + 16));
+			if (!list)
+				return nullptr;
+
+			uintptr_t entity = *reinterpret_cast<uintptr_t*>(list + 0x70 * chunkOffset);
+			return reinterpret_cast<T*>(entity);
+		}
+	};
+
+	class CEntityInstance;
+	class CEntityIdentity {
+	public:
+		SCHEMA_ADD_OFFSET(std::uint32_t, GetIndex, 0x10);
+		SCHEMA(const char*, GetDesignerName, "m_designerName", "CEntityIdentity", "client.dll");
+		SCHEMA(std::uint32_t, GetFlags, "m_flags", "CEntityIdentity", "client.dll");
+
+		bool isValid() {
+			return GetIndex() != INVALID_EHANDLE_INDEX;
+		}
+
+		int getEntryIndex() {
+			if (!isValid())
+				return ENT_ENTRY_MASK;
+
+			return GetIndex() & ENT_ENTRY_MASK;
+		}
+
+		int getSerialNumber() {
+			if (!isValid())
+				return 0;
+			return GetIndex() >> NUM_SERIAL_NUM_SHIFT_BITS;
+		}
+
+		CEntityInstance* pInstance;
+	};
+
+	class Vector3 {
+	public:
+		float x;
+		float y;
+		float z;
+	};
+
+	class CTransform {};
+
+	struct ViewMatrix_t {
+		float* operator[](int index) { return matrix[index]; }
+		float matrix[4][4];
+	};
+
+#if 0
+	class CGameSceneNode {
+	public:
+		SCHEMA(CEntityIdentity*, GetIdentity, "m_pOwner", "CGameSceneNode", "client.dll");
+		SCHEMA(Vector3, GetAbsOrigin, "m_vecAbsOrigin", "CGameSceneNode", "client.dll");
+		SCHEMA(bool, IsDormant, "m_bDormant", "CGameSceneNode", "client.dll");
+		SCHEMA(CTransform, GetTransform, "m_nodeToWorld", "CGameSceneNode", "client.dll");
+
+		// TODO: Get skeleton
+	};
+
+	// C_CSPlayerPawn : C_CSPlayerPawnBase : C_BasePlayerPawn : C_BaseCombatCharacter : C_BaseFlex : CBaseAnimGraph : C_BaseModelEntity : C_BaseEntity : CEntityInstance
+	class CEntityInstance {};
+	class C_BaseEntity : public CEntityInstance { // TODO: not finished! lol, so many netvars
+	public:
+		SCHEMA(std::int32_t, GetHealth, "m_iHealth", "C_BaseEntity", "client.dll");
+		SCHEMA(std::uint8_t, GetTeam, "m_iTeamNum", "C_BaseEntity", "client.dll");
+		SCHEMA(CGameSceneNode*, GetGameSceneNode, "m_pGameSceneNode", "C_BaseEntity", "client.dll");
+	};
+
+	class C_PlayerPing : C_BaseEntity {
+	public:
+		SCHEMA(CHandle, m_hPlayer, "m_hPlayer", "C_PlayerPing", "client.dll");
+		SCHEMA(CHandle, m_hPingedEntity, "m_hPingedEntity", "C_PlayerPing", "client.dll");
+		SCHEMA(int32, m_iType, "m_iType", "C_PlayerPing", "client.dll");
+		SCHEMA(bool, m_bUrgent, "m_bUrgent", "C_PlayerPing", "client.dll");
+		SCHEMA(char*, m_szPlaceName, "m_szPlaceName", "C_PlayerPing", "client.dll");
+	};
+	class CPlayerComponent {}; // no netvars
+	class CCSPlayer_PingServices : public CPlayerComponent {
+	public:
+		SCHEMA(CHandle, m_hPlayerPing, "m_hPlayerPing", "CCSPlayer_PingServices", "client.dll");
+	};
+	class CCSPlayer_BulletServices : public CPlayerComponent {
+	public:
+		SCHEMA(int32, m_totalHitsOnServer, "m_totalHitsOnServer", "CCSPlayer_BulletServices", "client.dll");
+	};
+	class CSPlayerState {}; // no netvars
+
+	class C_BaseModelEntity : public C_BaseEntity {};
+	class CBaseAnimGraph : public C_BaseModelEntity {};
+	class C_BaseFlex : public CBaseAnimGraph {};
+	class C_BaseCombatCharacter : public C_BaseFlex {};
+	class C_BasePlayerPawn : public C_BaseCombatCharacter {};
+	class C_CSPlayerPawnBase : public C_BasePlayerPawn {
+	public:
+		SCHEMA(CCSPlayer_PingServices*, m_pPingServices, "m_pPingServices", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(CSPlayerState, m_previousPlayerState, "m_previousPlayerState", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(CSPlayerState, m_iPlayerState, "m_iPlayerState", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(bool, m_bHasMovedSinceSpawn, "m_bHasMovedSinceSpawn", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(GameTime_t, m_flLastSpawnTimeIndex, "m_flLastSpawnTimeIndex", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(int32, m_iProgressBarDuration, "m_iProgressBarDuration", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flProgressBarStartTime, "m_flProgressBarStartTime", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(GameTime_t, m_flClientDeathTime, "m_flClientDeathTime", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flFlashBangTime, "m_flFlashBangTime", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flFlashScreenshotAlpha, "m_flFlashScreenshotAlpha", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flFlashOverlayAlpha, "m_flFlashOverlayAlpha", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(bool, m_bFlashBuildUp, "m_bFlashBuildUp", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(bool, m_bFlashDspHasBeenCleared, "m_bFlashDspHasBeenCleared", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(bool, m_bFlashScreenshotHasBeenGrabbed, "m_bFlashScreenshotHasBeenGrabbed", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flFlashMaxAlpha, "m_flFlashMaxAlpha", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flFlashDuration, "m_flFlashDuration", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(GameTime_t, m_flClientHealthFadeChangeTimestamp, "m_flClientHealthFadeChangeTimestamp", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(int32, m_nClientHealthFadeParityValue, "m_nClientHealthFadeParityValue", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_fNextThinkPushAway, "m_fNextThinkPushAway", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flCurrentMusicStartTime, "m_flCurrentMusicStartTime", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flMusicRoundStartTime, "m_flMusicRoundStartTime", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(bool, m_bDeferStartMusicOnWarmup, "m_bDeferStartMusicOnWarmup", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flLastSmokeOverlayAlpha, "m_flLastSmokeOverlayAlpha", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(float32, m_flLastSmokeAge, "m_flLastSmokeAge", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(Vector3, m_vLastSmokeOverlayColor, "m_vLastSmokeOverlayColor", "C_CSPlayerPawnBase", "client.dll");
+		SCHEMA(CHandle, m_hOriginalController, "m_hOriginalController", "C_CSPlayerPawnBase", "client.dll");
+	};
+	class C_CSPlayerPawn : public C_CSPlayerPawnBase {
+	};
+#endif
 } // namespace CS2
