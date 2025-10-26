@@ -339,6 +339,138 @@ namespace CS2 {
 		/* 0x20F0 */ int highestEntityIndex;
 	};
 	class IMatchmaking;
+
+	class Color {
+		int color32;
+	public:
+		Color() : color32(0) {}
+		Color(int r, int g, int b, int a) {
+			color32 = (a << 24) | (b << 16) | (g << 8) | r;
+		}
+		int r() const { return color32 & 0xFF; }
+		int g() const { return (color32 >> 8) & 0xFF; }
+		int b() const { return (color32 >> 16) & 0xFF; }
+	};
+
+	class LightDataEntry_t {
+	private:
+		int unk; // 0x0
+		int unk2; // 0x4
+		int unk3; // 0x8
+		float unk4; // 0xC
+	public:
+		Color col; // 0x10
+		int index; // 0x14
+		int handle = -1; // 0x18
+	private:
+		int unk5; // 0x1C
+	};
+	struct LightData_t {
+		char pad_0x000[0x8];
+		LightDataEntry_t entries[0x100];
+	};
+	class ISceneSystem {
+	private:
+		char pad_0x000[0x3148];
+	public:
+		class {
+		private:
+			char pad_0x000[0x18];
+		public:
+			LightData_t* data;
+		}* LightData;
+	};
+
+	class XyVec4 {
+	public:
+		float x; // 0x0
+		float y; // 0x4
+		float z; // 0x8
+		float w; // 0xC
+	};
+
+	class CTextureDx11;
+	class MaterialParameter_t {
+	public:
+		XyVec4 vec_value; // 0x0
+		CTextureDx11** texture_value; // 0x10
+		char pad_0x018[0x10]; // 0x18
+		const char* parameter_name; // 0x28
+		const char* text_value; // 0x30
+		int64_t int_value; // 0x38
+	};
+
+	class CMaterial2 {
+	public:
+		char pad_0x000[0x10];
+		int m_nParameterCount; // 0x10
+		char pad_0x14[0x4]; // 0x14
+		MaterialParameter_t* m_pParameter; // 0x18
+		char pad_0x020[0x3D8];
+		void* pMaterialMode;
+		const char* getName() {
+			using function_t = const char* (__thiscall*)(CMaterial2*);
+			return (*reinterpret_cast<function_t**>(uint64_t(this)))[0](this);
+		}
+
+		MaterialParameter_t* findParameter2(const char* name) {
+			for (int i = 0; i < m_nParameterCount; i++) {
+				if (strcmp(m_pParameter[i].parameter_name, name) == 0) {
+					return &m_pParameter[i];
+				}
+			}
+
+			return nullptr;
+		}
+	};
+
+	class CAggregateSceneObjectMaterialArray {
+	public:
+		CMaterial2* pMaterial;
+		char pad_0x008[0x28];
+	};
+
+
+	class CSceneWorld;
+	class CRenderMesh;
+
+	class CAggregateSceneObjectDesc;
+	class CAggregateSceneObject {
+	public:
+		void* vtable; // 0x0
+		char pad_0x008[0x10]; // 0x8
+		CAggregateSceneObjectDesc* pDesc; // 0x18
+		void* pSomeArray; // 0x20
+		char pad_0x028[0x88]; // 0x28
+		CSceneWorld* pSceneWorld; // 0xB0
+		char pad_0x0B8[0x18]; // 0xB8
+		void* pModelArray; // 0xD0
+		CAggregateSceneObjectMaterialArray* pMaterialArray; // 0xD8
+		char pad_0xE0[0x18]; // 0xE0
+		CRenderMesh* pRenderMesh; // 0xF8
+		void* pSomeData; // 0x100
+		char pad_0x108[0x30]; // 0x108
+		int nSomeCount1; // 0x138
+		char pad_0x13C[0x4]; // 0x13C
+		void* pSomeData1; // 0x140
+		char pad_0x148[0x8]; // 0x148
+		int nCount; // 0x150
+		char pad_0x154[0x4]; // 0x154
+		void* pSomeData2; // 0x158
+	};
+	class _CAggregateSceneObjectData {
+	public:
+		char pad_0x000[0x4];
+		int nCount;
+		char pad_0x008[0x8];
+		int nIndex;
+	};
+	class CAggregateObjectArr {
+	public:
+		CAggregateSceneObject* object;
+		_CAggregateSceneObjectData* data;
+	};
+
 	class CTraceManager;
 
 	using InstantiateInterfaceFn_t = void* (*)();
@@ -395,6 +527,7 @@ namespace CS2 {
 		inline ISchemaSystem* GSchemaSystem = nullptr;
 		inline IGameResourceService* GGameResourceService = nullptr;
 		inline IMatchmaking* GMatchmaking = nullptr;
+		inline ISceneSystem* GSceneSystem = nullptr;
 		inline CTraceManager* GTraceManager = nullptr;
 		bool setupInterfaces() {
 			bool success = true;
@@ -405,6 +538,8 @@ namespace CS2 {
 			success &= (scehemaRegisterList != nullptr);
 			const auto matchmakingRegisterList = CInterfaceRegister::GetRegisterList(L"matchmaking.dll");
 			success &= (matchmakingRegisterList != nullptr);
+			const auto sceneRegisterList = CInterfaceRegister::GetRegisterList(L"scenesystem.dll");
+			success &= (sceneRegisterList != nullptr);
 
 			GEngineClient = CInterfaceRegister::Capture<IEngineClient>(engineRegisterList, "Source2EngineToClient001");
 			success &= (GEngineClient != nullptr);
@@ -414,6 +549,8 @@ namespace CS2 {
 			success &= (GGameResourceService != nullptr);
 			GMatchmaking = CInterfaceRegister::Capture<IMatchmaking>(matchmakingRegisterList, "GameTypes001");
 			success &= (GMatchmaking != nullptr);
+			GSceneSystem = CInterfaceRegister::Capture<ISceneSystem>(sceneRegisterList, "SceneSystem_002");
+			success &= (GSceneSystem != nullptr);
 
 			// TODO: Set gTraceManager
 
@@ -676,6 +813,10 @@ namespace CS2 {
 			return index;
 		}
 
+		int ID() const noexcept {
+			return index & 0x1FF;
+		}
+
 	private:
 		uint32_t index;
 	};
@@ -740,7 +881,8 @@ namespace CS2 {
 
 	class CTransform {};
 
-	struct ViewMatrix_t {
+	class ViewMatrix_t {
+	public:
 		float* operator[](int index) { return matrix[index]; }
 		float matrix[4][4];
 	};

@@ -60,28 +60,42 @@ bool calcBoxSize(std::span<BoneJointData> boneData, ImVec2& min, ImVec2& max) {
 	return canDraw;
 }
 
-void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* oMax = nullptr, ImColor color = ImColor(100, 255, 100, 200)) {
+void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* oMax = nullptr, ImColor color = ImColor(255, 255, 255, 255)) {
 	ImVec2 min = ImVec2(FLT_MAX, FLT_MAX);
 	ImVec2 max = ImVec2(-FLT_MAX, -FLT_MAX);
 	if (!calcBoxSize(boneData, min, max)) return;
 	float boxWidth = max.x - min.x;
 	float boxHeight = max.y - min.y;
 
-	// Just draw corners
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
-	float lineThickness = 2.0f;
+	float cornerLength = 0.2f;
+	
 	// Top-left
-	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * 0.2f, min.y), color, lineThickness);
-	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * 0.2f), color, lineThickness);
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * cornerLength, min.y), IM_COL32(0, 0, 0, 255), 3.0f);
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
 	// Top-right
-	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x - boxWidth * 0.2f, min.y), color, lineThickness);
-	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x, min.y + boxHeight * 0.2f), color, lineThickness);
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x - boxWidth * cornerLength, min.y), IM_COL32(0, 0, 0, 255), 3.0f);
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x, min.y + boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
 	// Bottom-left
-	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x + boxWidth * 0.2f, max.y), color, lineThickness);
-	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x, max.y - boxHeight * 0.2f), color, lineThickness);
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x + boxWidth * cornerLength, max.y), IM_COL32(0, 0, 0, 255), 3.0f);
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x, max.y - boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
 	// Bottom-right
-	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * 0.2f, max.y), color, lineThickness);
-	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * 0.2f), color, lineThickness);
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * cornerLength, max.y), IM_COL32(0, 0, 0, 255), 3.0f);
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
+	
+	// White corners on top
+	// Top-left
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * cornerLength, min.y), color, 1.5f);
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * cornerLength), color, 1.5f);
+	// Top-right
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x - boxWidth * cornerLength, min.y), color, 1.5f);
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x, min.y + boxHeight * cornerLength), color, 1.5f);
+	// Bottom-left
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x + boxWidth * cornerLength, max.y), color, 1.5f);
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x, max.y - boxHeight * cornerLength), color, 1.5f);
+	// Bottom-right
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * cornerLength, max.y), color, 1.5f);
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * cornerLength), color, 1.5f);
 
 	if (oMin) *oMin = min;
 	if (oMax) *oMax = max;
@@ -98,14 +112,13 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 	static char classSearchBuf[256] = "";
 	static char fieldSearchBuf[256] = "";
 	static int currentTab = 0;
-	static int requestedTab = -1; // For programmatic tab switching
+	static int requestedTab = -1; 
 	static char offsetTestModule[128] = "client.dll";
 	static char offsetTestClass[128] = "C_BaseEntity";
 	static char offsetTestField[128] = "m_iHealth";
-	static std::string navigateToClass = ""; // For base class navigation
-	static std::string navigateToField = ""; // For field navigation within a class
-	static int navigationFrameDelay = 0; // Frame delay for smooth navigation
-	// Field Search Tab
+	static std::string navigateToClass = ""; 
+	static std::string navigateToField = ""; 
+	static int navigationFrameDelay = 0; 
 	static char fieldNameSearchBuf[256] = "";
 	static char fieldTypeSearchBuf[256] = "";
 	static char fieldScopeSearchBuf[256] = "";
@@ -151,17 +164,16 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 
 			for (int boneIndex : boneIndices) {
 				if (!W2S(bonePositions[boneIndex], pBoneArray[boneIndex].pos)) {
-					bonePositions[boneIndex] = ImVec2(-10.0f, -10.0f); // Off-screen
+					bonePositions[boneIndex] = ImVec2(-10.0f, -10.0f);
 				}
 			}
 
-			// Draw bones using bonePairs
 			for (const auto& [start, end] : bonePairs) {
 				if (bonePositions[start].x >= 0 && bonePositions[end].x >= 0) {
 					ImGui::GetBackgroundDrawList()->AddLine(
 						bonePositions[start],
 						bonePositions[end],
-						IM_COL32(100, 255, 100, 200), 2.0f
+						IM_COL32(255, 255, 255, 255), 2.0f
 					);
 				}
 			}
@@ -169,36 +181,58 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			ImVec2 min, max;
 			drawBox(std::span<BoneJointData>(pBoneArray, 28), &min, &max);
 
+			if (bonePositions[6].x >= 0) {
+				float headRadius = (max.y - min.y) * 0.08f;
+				ImGui::GetBackgroundDrawList()->AddCircle(
+					bonePositions[6],
+					headRadius,
+					IM_COL32(255, 255, 255, 255),
+					0, 2.0f
+				);
+			}
+
 			float healthPerc = (float)playerPawn->m_iHealth() / (float)playerPawn->m_iMaxHealth();
+			float barWidth = 3.0f;
+			float barOffset = 6.0f;
+			
 			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(min.x - 4.0f, min.y),
-				ImVec2(min.x - 2.0f, max.y),
-				IM_COL32(0, 0, 0, 150)
+				ImVec2(min.x - barOffset - barWidth - 1.0f, min.y - 1.0f),
+				ImVec2(min.x - barOffset + 1.0f, max.y + 1.0f),
+				IM_COL32(0, 0, 0, 200)
 			);
+			
+			float healthHeight = (max.y - min.y) * healthPerc;
+			ImColor healthColor;
+			if (healthPerc > 0.75f) {
+				healthColor = ImColor(50, 255, 50, 255); // White for high health
+			} else if (healthPerc > 0.5f) {
+				healthColor = ImColor(255, 255, 100, 255); // Yellow for medium
+			} else if (healthPerc > 0.25f) {
+				healthColor = ImColor(255, 150, 0, 255); // Orange for low
+			} else {
+				healthColor = ImColor(255, 50, 50, 255); // Red for critical
+			}
+			
 			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(min.x - 4.0f, max.y - (max.y - min.y) * healthPerc),
-				ImVec2(min.x - 2.0f, max.y),
-				IM_COL32(255 - (int)(255 * healthPerc), (int)(255 * healthPerc), 0, 255)
+				ImVec2(min.x - barOffset - barWidth, max.y - healthHeight),
+				ImVec2(min.x - barOffset, max.y),
+				healthColor
 			);
 
 			float armorPerc = (float)playerPawn->m_ArmorValue() / 100.0f;
-			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(max.x + 2.0f, min.y),
-				ImVec2(max.x + 4.0f, max.y),
-				IM_COL32(0, 0, 0, 150)
-			);
-			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(max.x + 2.0f, max.y - (max.y - min.y) * armorPerc),
-				ImVec2(max.x + 4.0f, max.y),
-				IM_COL32(100, 100, 255, 255)
-			);
-
-			auto name = entityController->m_sSanitizedPlayerName();
-			if (name) {
-				ImGui::GetBackgroundDrawList()->AddText(
-					ImVec2(min.x + ((max.x - min.x) / 2) - (ImGui::CalcTextSize(name).x / 2), max.y + 2.0f),
-					IM_COL32(255, 255, 255, 255),
-					name
+			
+			if (armorPerc > 0.0f) {
+				ImGui::GetBackgroundDrawList()->AddRectFilled(
+					ImVec2(max.x + barOffset - 1.0f, min.y - 1.0f),
+					ImVec2(max.x + barOffset + barWidth + 1.0f, max.y + 1.0f),
+					IM_COL32(0, 0, 0, 200)
+				);
+				
+				float armorHeight = (max.y - min.y) * armorPerc;
+				ImGui::GetBackgroundDrawList()->AddRectFilled(
+					ImVec2(max.x + barOffset, max.y - armorHeight),
+					ImVec2(max.x + barOffset + barWidth, max.y),
+					IM_COL32(100, 180, 255, 255)
 				);
 			}
 		}
@@ -207,7 +241,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
 			ImGui::Begin("CS2 Schema Explorer", nullptr, ImGuiWindowFlags_MenuBar);
 
-			// Menu Bar
 			if (ImGui::BeginMenuBar()) {
 				if (ImGui::BeginMenu("View")) {
 					if (ImGui::MenuItem("Entity Debug")) requestedTab = 0;
@@ -218,7 +251,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 				ImGui::EndMenuBar();
 			}
 
-			// Tab Bar
 			if (ImGui::BeginTabBar("MainTabs")) {
 				ImGuiTabItemFlags entityFlags = (requestedTab == 0) ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
 				if (requestedTab == 0) requestedTab = -1;
@@ -231,7 +263,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 					
 					ImGui::BeginChild("EntityList", ImVec2(0, 0), false);
 
-					// Table layout
 					if (ImGui::BeginTable("EntityTable", 5, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit)) {
 						// Table headers
 						ImGui::TableSetupColumn("Name");
@@ -307,7 +338,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 					auto schema = CS2::Interfaces::GSchemaSystem;
 					int visibleScopes = 0;
 					
-					// Handle delayed navigation
 					if (navigationFrameDelay > 0) {
 						navigationFrameDelay--;
 					}
@@ -317,7 +347,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 						std::string scopeNameLower = scopeName;
 						std::transform(scopeNameLower.begin(), scopeNameLower.end(), scopeNameLower.begin(), ::tolower);
 						
-						// Filter scopes
 						if (!scopeSearch.empty() && scopeNameLower.find(scopeSearch) == std::string::npos) {
 							continue;
 						}
@@ -326,7 +355,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 						char scopeLabel[512];
 						int classCount = 0;
 						
-						// Count visible classes in this scope
 						for (const auto& classInfo : typeScope->declaredClasses) {
 							std::string className = classInfo.name;
 							std::string classNameLower = className;
@@ -338,7 +366,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 						
 						sprintf_s(scopeLabel, "%s (%d classes)", typeScope->name, classCount);
 						
-						// Auto-expand scope if we're navigating to a class in it
 						bool shouldExpandScope = false;
 						if (!navigateToClass.empty() && navigationFrameDelay == 0) {
 							for (const auto& classInfo : typeScope->declaredClasses) {
@@ -356,7 +383,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 						}
 						
 						if (ImGui::TreeNodeEx(typeScope->name, scopeFlags, "%s", scopeLabel)) {
-							// Right-click context menu for scope
 							if (ImGui::BeginPopupContextItem()) {
 								if (ImGui::MenuItem("Copy Scope Name")) {
 									ImGui::SetClipboardText(typeScope->name);
@@ -365,7 +391,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 							if (ImGui::MenuItem("Generate SDK for Scope")) {
 								std::string sdkOutput;
 								
-								// Collect all class names in this scope
 								std::vector<std::string> declaredClasses;
 								for (const auto& classInfo : typeScope->declaredClasses) {
 									std::string className = classInfo.name;
@@ -374,7 +399,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 									}
 								}
 								
-							// Collect all referenced types from fields
 							std::vector<std::string> referencedTypes;
 							for (const auto& classInfo : typeScope->declaredClasses) {
 								std::string className = classInfo.name;
@@ -382,11 +406,9 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 									continue;
 								}
 								
-								// Check base class
 								auto bc = classInfo.baseClasses;
 								if (bc && bc->info && bc->info->name) {
 									std::string baseClassName = bc->info->name;
-									// Add base class if not already declared in this scope
 									if (std::find(declaredClasses.begin(), declaredClasses.end(), baseClassName) == declaredClasses.end() &&
 										std::find(referencedTypes.begin(), referencedTypes.end(), baseClassName) == referencedTypes.end()) {
 										referencedTypes.push_back(baseClassName);
@@ -397,7 +419,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 										for (const auto& field : classInfo.fieldsSpan()) {
 											std::string typeName = field.schemaType->typeName;
 											
-											// Remove pointer/reference markers and template parameters for checking
 											std::string cleanTypeName = typeName;
 											size_t ptrPos = cleanTypeName.find('*');
 											if (ptrPos != std::string::npos) {
@@ -412,11 +433,9 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 												cleanTypeName = cleanTypeName.substr(0, templatePos);
 											}
 											
-											// Trim whitespace
 											cleanTypeName.erase(0, cleanTypeName.find_first_not_of(" \t"));
 											cleanTypeName.erase(cleanTypeName.find_last_not_of(" \t") + 1);
 											
-											// Check if this type is not already declared and not a primitive
 											if (!cleanTypeName.empty() && 
 												cleanTypeName != "void" &&
 												cleanTypeName != "bool" &&
@@ -440,36 +459,31 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 									}
 								}
 								
-								// Forward declarations
 								sdkOutput += "// Forward declarations\n";
 								for (const auto& className : declaredClasses) {
 									sdkOutput += std::format("class {};\n", className);
 								}
 								
-								// Forward declare referenced but not defined types
 								if (!referencedTypes.empty()) {
 									sdkOutput += "\n// Referenced types (not in this scope)\n";
 									for (const auto& typeName : referencedTypes) {
 										sdkOutput += std::format("class {};\n", typeName);
 									}
 								}
-								sdkOutput += "\n";								// Generate class definitions
+								sdkOutput += "\n";
 								for (const auto& classInfo : typeScope->declaredClasses) {
 									std::string className = classInfo.name;
 									
-									// Skip classes with :: in the name
 									if (className.find("::") != std::string::npos) {
 										continue;
 									}
 									
-									// If class has no fields, skip full definition (already forward declared)
 									if (classInfo.fieldsCount == 0) {
 										continue;
 									}
 									
 									sdkOutput += std::format("// Class: {} (Size: 0x{:X})\n", className, classInfo.size);
 									
-									// Class declaration with base class if it exists
 									auto bc = classInfo.baseClasses;
 									if (bc && bc->info && bc->info->name) {
 										sdkOutput += std::format("class {} : public {} {{\n", className, bc->info->name);
@@ -479,7 +493,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 									
 									sdkOutput += "public:\n";
 									
-									// Generate SCHEMA macros for all fields
 									for (const auto& field : classInfo.fieldsSpan()) {
 										sdkOutput += std::format("\tSCHEMA({}, {}, \"{}\", \"{}\", \"{}\");\n",
 											field.schemaType->typeName,
@@ -502,7 +515,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 								std::string classNameLower = className;
 								std::transform(classNameLower.begin(), classNameLower.end(), classNameLower.begin(), ::tolower);
 								
-								// Filter classes
 								if (!classSearch.empty() && classNameLower.find(classSearch) == std::string::npos) {
 									continue;
 								}
@@ -514,10 +526,8 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 									baseClasses = bc->info->name;
 								}
 
-								// Use colored TreeNodeEx for better control
 								ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
 								
-								// Auto-expand and scroll to class if we're navigating to it
 								bool isNavigationTarget = (!navigateToClass.empty() && classInfo.name == navigateToClass && navigationFrameDelay == 0);
 								if (isNavigationTarget) {
 									flags |= ImGuiTreeNodeFlags_DefaultOpen;
@@ -526,7 +536,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 								
 							bool nodeOpen = ImGui::TreeNodeEx(classInfo.name, flags, "%s", classInfo.name);
 							
-							// Right-click context menu for class - must be right after TreeNodeEx
 							std::string classContextMenuID = std::format("ClassContextMenu_{}", classInfo.name);
 							if (ImGui::BeginPopupContextItem(classContextMenuID.c_str())) {
 								if (ImGui::MenuItem("Copy Class Name")) {
@@ -562,29 +571,25 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 								ImGui::EndPopup();
 							}
 							
-							// Scroll to the navigation target
 							if (isNavigationTarget) {
-								ImGui::SetScrollHereY(0.3f); // Scroll so item is 30% from top
-								navigateToClass = ""; // Clear navigation target
-							}								// Add base class in color on the same line if it exists - make it clickable
+								ImGui::SetScrollHereY(0.3f); 
+								navigateToClass = ""; 
+							}
 								if (hasBaseClass) {
 									ImGui::SameLine(0, 5);
 									ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), ":");
 									ImGui::SameLine(0, 5);
 									
-									// Make base class name clickable
 									ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.6f, 0.8f, 0.3f));
 									ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.6f, 0.8f, 0.5f));
 									ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 									
-									// Calculate text size for button
 									ImVec2 textSize = ImGui::CalcTextSize(baseClasses.c_str());
 									
 									if (ImGui::Button(std::format("##baseclass_{}", classInfo.name).c_str(), textSize)) {
-										// Navigate to base class
 										navigateToClass = baseClasses;
-										navigationFrameDelay = 2; // Small delay for smooth transition
+										navigationFrameDelay = 2;
 									}
 									
 									// Draw colored text over button
