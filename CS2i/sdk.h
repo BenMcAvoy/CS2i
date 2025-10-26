@@ -877,6 +877,30 @@ namespace CS2 {
 		float x;
 		float y;
 		float z;
+
+		bool isZero() const {
+			return x == 0.0f && y == 0.0f && z == 0.0f;
+		}
+		bool operator==(const Vector3& other) const {
+			return x == other.x && y == other.y && z == other.z;
+		}
+		bool operator!=(const Vector3& other) const {
+			return !(*this == other);
+		}
+		bool operator<(const Vector3& other) const {
+			if (x != other.x) return x < other.x;
+			if (y != other.y) return y < other.y;
+			return z < other.z;
+		}
+		bool operator<=(const Vector3& other) const {
+			return *this < other || *this == other;
+		}
+		bool operator>(const Vector3& other) const {
+			return !(*this <= other);
+		}
+		bool operator>=(const Vector3& other) const {
+			return !(*this < other);
+		}
 	};
 
 	class CTransform {};
@@ -894,7 +918,7 @@ namespace CS2 {
 		RIGHT_LEG = 25, RIGHT_KNEE = 26, RIGHT_FOOT = 27
 	};
 	static std::pair<int, int> bones[] = {
-		{HEAD, NECK}, {NECK, PELVIS}, {NECK, LEFT_SHOULDER}, {NECK, RIGHT_SHOULDER},
+		{NECK, PELVIS}, {NECK, LEFT_SHOULDER}, {NECK, RIGHT_SHOULDER},
 		{PELVIS, LEFT_LEG}, {PELVIS, RIGHT_LEG}, {LEFT_SHOULDER, LEFT_ELBOW}, {LEFT_ELBOW, LEFT_HAND},
 		{RIGHT_SHOULDER, RIGHT_ELBOW}, {RIGHT_ELBOW, RIGHT_HAND}, {LEFT_LEG, LEFT_KNEE}, {LEFT_KNEE, LEFT_FOOT},
 		{RIGHT_LEG, RIGHT_KNEE}, {RIGHT_KNEE, RIGHT_FOOT}

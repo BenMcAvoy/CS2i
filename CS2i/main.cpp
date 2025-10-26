@@ -3,9 +3,21 @@
 
 #include <algorithm>
 #include <format>
+#include <chrono>
+#include <unordered_map>
 
 #include "sdk.h"
 #include "sdk-gen.h"
+
+// Death tracking
+using SteadyClock = std::chrono::steady_clock;
+using TimePoint = SteadyClock::time_point;
+struct DeathState {
+	TimePoint timestamp;
+	bool fadedOut = false;
+};
+std::unordered_map<int, DeathState> g_deathStates; // entity index -> death state
+constexpr float SKELETON_FADE_DURATION = 2.0f;
 
 bool W2S(ImVec2& out, const CS2::Vector3& in) {
 	auto vm = *CS2::Offsets::viewMatrix;
@@ -32,32 +44,64 @@ struct BoneJointData {
 	char pad[16];
 };
 
+constexpr auto boneIndices = {
+	CS2::PELVIS, CS2::NECK, CS2::HEAD, CS2::LEFT_SHOULDER, CS2::LEFT_ELBOW, CS2::LEFT_HAND,
+	CS2::RIGHT_SHOULDER, CS2::RIGHT_ELBOW, CS2::RIGHT_HAND, CS2::LEFT_LEG, CS2::LEFT_KNEE, CS2::LEFT_FOOT,
+	CS2::RIGHT_LEG, CS2::RIGHT_KNEE, CS2::RIGHT_FOOT
+};
+
 bool calcBoxSize(std::span<BoneJointData> boneData, ImVec2& min, ImVec2& max) {
-	auto& bones = CS2::bonesToRead;
-	bool canDraw = true;
-	ImVec2 screenPos;
-	for (auto bone : bones) {
-		auto pos = boneData[bone].pos;
-		if (W2S(screenPos, pos)) {
-			if (screenPos.x < min.x) min.x = screenPos.x;
-			if (screenPos.y < min.y) min.y = screenPos.y;
-			if (screenPos.x > max.x) max.x = screenPos.x;
-			if (screenPos.y > max.y) max.y = screenPos.y;
-		}
-		else {
-			canDraw = false;
-			break;
-		}
-	}
+	CS2::Vector3 min3D = { FLT_MAX, FLT_MAX, FLT_MAX };
+    CS2::Vector3 max3D = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
 
-	// Padding +/- x pixels
-	const float padding = 5.0f;
-	min.x -= padding;
-	min.y -= padding;
-	max.x += padding;
-	max.y += padding;
+    for (auto boneIndex : boneIndices) {
+        const auto& pos = boneData[boneIndex].pos;
+        if (pos.x < min3D.x) min3D.x = pos.x;
+        if (pos.y < min3D.y) min3D.y = pos.y;
+        if (pos.z < min3D.z) min3D.z = pos.z;
+        if (pos.x > max3D.x) max3D.x = pos.x;
+        if (pos.y > max3D.y) max3D.y = pos.y;
+        if (pos.z > max3D.z) max3D.z = pos.z;
+    }
 
-	return canDraw;
+    const float padding3D = 5.0f;
+    min3D.x -= padding3D;
+    min3D.y -= padding3D;
+    min3D.z -= padding3D;
+    max3D.x += padding3D;
+    max3D.y += padding3D;
+    max3D.z += padding3D;
+
+    const CS2::Vector3 corners[8] = {
+        {min3D.x, min3D.y, min3D.z},
+        {min3D.x, min3D.y, max3D.z},
+        {min3D.x, max3D.y, min3D.z},
+        {min3D.x, max3D.y, max3D.z},
+        {max3D.x, min3D.y, min3D.z},
+        {max3D.x, min3D.y, max3D.z},
+        {max3D.x, max3D.y, min3D.z},
+        {max3D.x, max3D.y, max3D.z},
+    };
+
+    bool visible = false;
+    ImVec2 projected;
+    min = { FLT_MAX, FLT_MAX };
+    max = { -FLT_MAX, -FLT_MAX };
+
+    for (const auto& corner : corners) {
+        if (W2S(projected, corner)) {
+            visible = true;
+            if (projected.x < min.x) min.x = projected.x;
+            if (projected.y < min.y) min.y = projected.y;
+            if (projected.x > max.x) max.x = projected.x;
+            if (projected.y > max.y) max.y = projected.y;
+        }
+    }
+
+    if (!visible)
+        return false;
+
+    return true;
 }
 
 void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* oMax = nullptr, ImColor color = ImColor(255, 255, 255, 255)) {
@@ -70,20 +114,6 @@ void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* 
 	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
 	float cornerLength = 0.2f;
 	
-	// Top-left
-	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * cornerLength, min.y), IM_COL32(0, 0, 0, 255), 3.0f);
-	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
-	// Top-right
-	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x - boxWidth * cornerLength, min.y), IM_COL32(0, 0, 0, 255), 3.0f);
-	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x, min.y + boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
-	// Bottom-left
-	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x + boxWidth * cornerLength, max.y), IM_COL32(0, 0, 0, 255), 3.0f);
-	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x, max.y - boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
-	// Bottom-right
-	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * cornerLength, max.y), IM_COL32(0, 0, 0, 255), 3.0f);
-	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * cornerLength), IM_COL32(0, 0, 0, 255), 3.0f);
-	
-	// White corners on top
 	// Top-left
 	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * cornerLength, min.y), color, 1.5f);
 	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * cornerLength), color, 1.5f);
@@ -141,8 +171,54 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 
 			CS2::C_CSPlayerPawn* localPlayer = *reinterpret_cast<CS2::C_CSPlayerPawn**>(CS2::Offsets::dwLocalPlayerPawn);
 			if (playerPawn == localPlayer) continue;
+
 			if (entityController->m_iTeamNum() == localPlayer->m_iTeamNum()) continue;
-			if ((int)playerPawn->m_iHealth() <= 0) continue;
+
+			// Track death times
+			int health = (int)playerPawn->m_iHealth();
+			bool isDead = (health <= 0);
+			auto deathIt = g_deathStates.find(i);
+			
+			if (isDead) {
+				// If not already tracked or if they respawned and died again
+				if (deathIt == g_deathStates.end()) {
+					DeathState state;
+					state.timestamp = SteadyClock::now();
+					state.fadedOut = false;
+					g_deathStates[i] = state;
+					deathIt = g_deathStates.find(i);
+				} else if (deathIt->second.fadedOut) {
+					// Already faded out, skip rendering
+					continue;
+				}
+			} else {
+				// Alive - clear any death record (respawned)
+				if (deathIt != g_deathStates.end()) {
+					g_deathStates.erase(deathIt);
+					deathIt = g_deathStates.end();
+				}
+			}
+
+			// Calculate fade alpha for dead players
+			float skeletonAlpha = 1.0f;
+			bool drawMoreThanSkele = true;
+			
+			if (isDead && deathIt != g_deathStates.end() && !deathIt->second.fadedOut) {
+				auto now = SteadyClock::now();
+				float secondsSinceDeath = std::chrono::duration<float>(now - deathIt->second.timestamp).count();
+				
+				// Fade out over SKELETON_FADE_DURATION seconds
+				if (secondsSinceDeath >= SKELETON_FADE_DURATION) {
+					// Completely faded - mark as faded out and skip rendering
+					deathIt->second.fadedOut = true;
+					continue;
+				}
+				
+				// Linear fade: 1.0 -> 0.0 over fade duration
+				skeletonAlpha = 1.0f - (secondsSinceDeath / SKELETON_FADE_DURATION);
+				drawMoreThanSkele = false;
+			}
+
 			CS2::CGameSceneNode* pNode = playerPawn->m_pGameSceneNode();
 			if (!pNode) continue;
 
@@ -160,7 +236,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			}
 
 			auto& bonePairs = CS2::bones;
-			auto& boneIndices = CS2::bonesToRead;
 
 			for (int boneIndex : boneIndices) {
 				if (!W2S(bonePositions[boneIndex], pBoneArray[boneIndex].pos)) {
@@ -170,13 +245,18 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 
 			for (const auto& [start, end] : bonePairs) {
 				if (bonePositions[start].x >= 0 && bonePositions[end].x >= 0) {
+					// Apply fade alpha to skeleton lines
+					uint8_t alpha = static_cast<uint8_t>(255 * skeletonAlpha);
 					ImGui::GetBackgroundDrawList()->AddLine(
 						bonePositions[start],
 						bonePositions[end],
-						IM_COL32(255, 255, 255, 255), 2.0f
+						IM_COL32(255, 255, 255, alpha), 2.0f
 					);
 				}
 			}
+
+			if (!drawMoreThanSkele)
+				continue;
 
 			ImVec2 min, max;
 			drawBox(std::span<BoneJointData>(pBoneArray, 28), &min, &max);
@@ -184,7 +264,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			if (bonePositions[6].x >= 0) {
 				float headRadius = (max.y - min.y) * 0.08f;
 				ImGui::GetBackgroundDrawList()->AddCircle(
-					bonePositions[6],
+					bonePositions[CS2::HEAD],
 					headRadius,
 					IM_COL32(255, 255, 255, 255),
 					0, 2.0f
@@ -194,12 +274,6 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			float healthPerc = (float)playerPawn->m_iHealth() / (float)playerPawn->m_iMaxHealth();
 			float barWidth = 3.0f;
 			float barOffset = 6.0f;
-			
-			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(min.x - barOffset - barWidth - 1.0f, min.y - 1.0f),
-				ImVec2(min.x - barOffset + 1.0f, max.y + 1.0f),
-				IM_COL32(0, 0, 0, 200)
-			);
 			
 			float healthHeight = (max.y - min.y) * healthPerc;
 			ImColor healthColor;
@@ -212,29 +286,40 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			} else {
 				healthColor = ImColor(255, 50, 50, 255); // Red for critical
 			}
-			
+
+			// Draw healthbar along bottom side of the box (horizontal)
 			ImGui::GetBackgroundDrawList()->AddRectFilled(
-				ImVec2(min.x - barOffset - barWidth, max.y - healthHeight),
-				ImVec2(min.x - barOffset, max.y),
+				ImVec2(min.x, max.y + barOffset),
+				ImVec2(max.x - 4, max.y + barOffset + barWidth),
+				IM_COL32(0, 0, 0, 200)
+			);
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(min.x, max.y + barOffset),
+				ImVec2(min.x - 4 + (max.x - min.x) * healthPerc, max.y + barOffset + barWidth),
 				healthColor
 			);
 
-			float armorPerc = (float)playerPawn->m_ArmorValue() / 100.0f;
-			
-			if (armorPerc > 0.0f) {
-				ImGui::GetBackgroundDrawList()->AddRectFilled(
-					ImVec2(max.x + barOffset - 1.0f, min.y - 1.0f),
-					ImVec2(max.x + barOffset + barWidth + 1.0f, max.y + 1.0f),
-					IM_COL32(0, 0, 0, 200)
-				);
-				
-				float armorHeight = (max.y - min.y) * armorPerc;
-				ImGui::GetBackgroundDrawList()->AddRectFilled(
-					ImVec2(max.x + barOffset, max.y - armorHeight),
-					ImVec2(max.x + barOffset + barWidth, max.y),
-					IM_COL32(100, 180, 255, 255)
-				);
-			}
+			// If armour, draw blue square, else draw black square (with the extra 4px we created)
+			bool hasArmor = playerPawn->m_ArmorValue() > 0;
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(max.x - 2, max.y + barOffset),
+				ImVec2(max.x + 2, max.y + barOffset + barWidth),
+				hasArmor ? IM_COL32(50, 150, 255, 255) : IM_COL32(0, 0, 0, 200)
+			);
+
+			const char* name = entityController->m_sSanitizedPlayerName();
+			ImVec2 nameSize = ImGui::CalcTextSize(name);
+			ImGui::GetBackgroundDrawList()->AddText(
+				ImVec2(min.x + ((max.x - min.x) / 2) - (nameSize.x / 2), min.y - nameSize.y - 4),
+				IM_COL32(255, 255, 255, 255),
+				name
+			);
+
+
+			/*auto ID = localPlayer->m_hController().ID();
+			uint64_t mSpotted;
+			memcpy(&mSpotted, playerPawn->m_entitySpottedState().m_bSpottedByMask(), sizeof(uint64_t));
+			bool spotted = (mSpotted & (1ULL << ID)) != 0;*/
 		}
 
 		if (takesFocus) {
@@ -263,13 +348,14 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 					
 					ImGui::BeginChild("EntityList", ImVec2(0, 0), false);
 
-					if (ImGui::BeginTable("EntityTable", 5, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit)) {
+					if (ImGui::BeginTable("EntityTable", 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit)) {
 						// Table headers
 						ImGui::TableSetupColumn("Name");
 						ImGui::TableSetupColumn("Index");
 						ImGui::TableSetupColumn("Health");
 						ImGui::TableSetupColumn("Ping");
 						ImGui::TableSetupColumn("Position");
+						ImGui::TableSetupColumn("Extras");
 						ImGui::TableHeadersRow();
 
 						for (int i = 1; i < 64; i++) {
@@ -285,6 +371,11 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 
 							const char* sanitizedName = entityController->m_sSanitizedPlayerName();
 
+							auto test = playerPawn->m_nSimulationTick();
+							auto test2 = playerPawn->m_flSimulationTime();
+
+							auto lifetime = entityController->m_iPawnLifetimeEnd();
+
 							ImGui::TableNextRow();
 							ImGui::TableNextColumn();
 							ImGui::Text("%s", sanitizedName ? sanitizedName : "N/A");
@@ -296,6 +387,8 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 							ImGui::Text("%d", entityController->m_iPing());
 							ImGui::TableNextColumn();
 							ImGui::Text("(%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
+							ImGui::TableNextColumn();
+							ImGui::Text("death time %d.  Test %d %f", lifetime, test, test2);
 						}
 						ImGui::EndTable();
 					}
