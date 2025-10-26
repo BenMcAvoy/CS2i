@@ -52,9 +52,29 @@ namespace CS2 {
 	using uint64 = uint64_t;
 
 	// TODO: Get these automatically instead of hardcoding
+	class ViewMatrix_t;
+	class CCSPlayerController;
+	class C_CSPlayerPawn;
 	namespace Offsets {
 		uintptr_t dwEntityList = *reinterpret_cast<uintptr_t*>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1D07A80
+			);
+
+		ViewMatrix_t* viewMatrix = reinterpret_cast<ViewMatrix_t*>(
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E25F30
+			);
+
+		int32_t* width = reinterpret_cast<int32_t*>(
+			(uintptr_t)GetModuleHandleA("engine2.dll") + 0x8ED620
+			);
+		int32_t* height = reinterpret_cast<int32_t*>(
+			(uintptr_t)GetModuleHandleA("engine2.dll") + 0x8ED624
+			);
+		void* dwLocalPlayerController = reinterpret_cast<CCSPlayerController**>(
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E11978
+			);
+		void* dwLocalPlayerPawn = reinterpret_cast<C_CSPlayerPawn**>(
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1BE2D10
 			);
 	} // namespace Offsets
 
@@ -214,7 +234,7 @@ namespace CS2 {
 		static inline ID3D11Device* pDevice = nullptr;
 		static inline ID3D11DeviceContext* pContext = nullptr;
 		static inline ID3D11RenderTargetView* pRenderTargetView = nullptr;
-		
+
 		static inline bool takesFocus_ = true;
 
 		static LRESULT __stdcall WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -251,7 +271,8 @@ namespace CS2 {
 				if (std::filesystem::exists(path)) {
 					io.Fonts->AddFontFromFileTTF(path, 16.0f);
 					io.Fonts->Build();
-				} else {
+				}
+				else {
 					io.Fonts->AddFontDefault();
 				}
 
@@ -546,7 +567,7 @@ namespace CS2 {
 	};
 
 	struct SchemaStaticFieldData_t {
-		/* 0x000 */ const char* fieldName; 
+		/* 0x000 */ const char* fieldName;
 		/* 0x008 */ CSchemaType* schemaType;
 		/* 0x010 */ void* instance;
 
@@ -723,6 +744,37 @@ namespace CS2 {
 		float* operator[](int index) { return matrix[index]; }
 		float matrix[4][4];
 	};
+
+	// NOTE: These may need updating if the skeleton changes..
+	enum BONEINDEX : int {
+		PELVIS = 0, NECK = 5, HEAD = 6, LEFT_SHOULDER = 8, LEFT_ELBOW = 9, LEFT_HAND = 11,
+		RIGHT_SHOULDER = 13, RIGHT_ELBOW = 14, RIGHT_HAND = 16, LEFT_LEG = 22, LEFT_KNEE = 23, LEFT_FOOT = 24,
+		RIGHT_LEG = 25, RIGHT_KNEE = 26, RIGHT_FOOT = 27
+	};
+	static std::pair<int, int> bones[] = {
+		{HEAD, NECK}, {NECK, PELVIS}, {NECK, LEFT_SHOULDER}, {NECK, RIGHT_SHOULDER},
+		{PELVIS, LEFT_LEG}, {PELVIS, RIGHT_LEG}, {LEFT_SHOULDER, LEFT_ELBOW}, {LEFT_ELBOW, LEFT_HAND},
+		{RIGHT_SHOULDER, RIGHT_ELBOW}, {RIGHT_ELBOW, RIGHT_HAND}, {LEFT_LEG, LEFT_KNEE}, {LEFT_KNEE, LEFT_FOOT},
+		{RIGHT_LEG, RIGHT_KNEE}, {RIGHT_KNEE, RIGHT_FOOT}
+	};
+	static int bonesToRead[] = {
+		PELVIS,
+		NECK,
+		HEAD,
+		LEFT_SHOULDER,
+		LEFT_ELBOW,
+		LEFT_HAND,
+		RIGHT_SHOULDER,
+		RIGHT_ELBOW,
+		RIGHT_HAND,
+		LEFT_LEG,
+		LEFT_KNEE,
+		LEFT_FOOT,
+		RIGHT_LEG,
+		RIGHT_KNEE,
+		RIGHT_FOOT
+	};
+
 
 #if 0
 	class CGameSceneNode {

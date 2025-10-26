@@ -7,6 +7,86 @@
 #include "sdk.h"
 #include "sdk-gen.h"
 
+bool W2S(ImVec2& out, const CS2::Vector3& in) {
+	auto vm = *CS2::Offsets::viewMatrix;
+	float w = vm[3][0] * in.x + vm[3][1] * in.y + vm[3][2] * in.z + vm[3][3];
+	if (w < 0.01f)
+		return false;
+
+	float invW = 1.0f / w;
+	out.x = (vm[0][0] * in.x + vm[0][1] * in.y + vm[0][2] * in.z + vm[0][3]) * invW;
+	out.y = (vm[1][0] * in.x + vm[1][1] * in.y + vm[1][2] * in.z + vm[1][3]) * invW;
+
+	float sw = (float)*CS2::Offsets::width;
+	float sh = (float)*CS2::Offsets::height;
+
+	out.x = (sw / 2.0f) + (out.x * sw) / 2.0f;
+	out.y = (sh / 2.0f) - (out.y * sh) / 2.0f;
+
+	return true;
+}
+
+struct BoneJointData {
+	CS2::Vector3 pos;
+	float scale;
+	char pad[16];
+};
+
+bool calcBoxSize(std::span<BoneJointData> boneData, ImVec2& min, ImVec2& max) {
+	auto& bones = CS2::bonesToRead;
+	bool canDraw = true;
+	ImVec2 screenPos;
+	for (auto bone : bones) {
+		auto pos = boneData[bone].pos;
+		if (W2S(screenPos, pos)) {
+			if (screenPos.x < min.x) min.x = screenPos.x;
+			if (screenPos.y < min.y) min.y = screenPos.y;
+			if (screenPos.x > max.x) max.x = screenPos.x;
+			if (screenPos.y > max.y) max.y = screenPos.y;
+		}
+		else {
+			canDraw = false;
+			break;
+		}
+	}
+
+	// Padding +/- x pixels
+	const float padding = 5.0f;
+	min.x -= padding;
+	min.y -= padding;
+	max.x += padding;
+	max.y += padding;
+
+	return canDraw;
+}
+
+void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* oMax = nullptr, ImColor color = ImColor(100, 255, 100, 200)) {
+	ImVec2 min = ImVec2(FLT_MAX, FLT_MAX);
+	ImVec2 max = ImVec2(-FLT_MAX, -FLT_MAX);
+	if (!calcBoxSize(boneData, min, max)) return;
+	float boxWidth = max.x - min.x;
+	float boxHeight = max.y - min.y;
+
+	// Just draw corners
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	float lineThickness = 2.0f;
+	// Top-left
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x + boxWidth * 0.2f, min.y), color, lineThickness);
+	drawList->AddLine(ImVec2(min.x, min.y), ImVec2(min.x, min.y + boxHeight * 0.2f), color, lineThickness);
+	// Top-right
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x - boxWidth * 0.2f, min.y), color, lineThickness);
+	drawList->AddLine(ImVec2(max.x, min.y), ImVec2(max.x, min.y + boxHeight * 0.2f), color, lineThickness);
+	// Bottom-left
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x + boxWidth * 0.2f, max.y), color, lineThickness);
+	drawList->AddLine(ImVec2(min.x, max.y), ImVec2(min.x, max.y - boxHeight * 0.2f), color, lineThickness);
+	// Bottom-right
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * 0.2f, max.y), color, lineThickness);
+	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * 0.2f), color, lineThickness);
+
+	if (oMin) *oMin = min;
+	if (oMax) *oMax = max;
+}
+
 DWORD WINAPI MainThread(LPVOID lpParam) {
 	CS2::initPtrs();
 	CS2::Interfaces::setupInterfaces();
@@ -34,6 +114,94 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 	auto& presentManager = CS2::PresentManager_t::get();
 	presentManager.setOnPresentCallback([](bool& takesFocus, IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
 		outerTakesFocus = &takesFocus;
+
+		for (int i = 1; i < 64; i++) {
+			auto* entityController = CS2::CEntityList::GetEntityByIndex<CS2::CCSPlayerController>(i);
+			if (!entityController) continue;
+
+			auto& hPawn = entityController->m_hPlayerPawn();
+			if (!hPawn.IsValid()) continue;
+			auto* playerPawn = CS2::CEntityList::GetEntityByHandle<CS2::C_CSPlayerPawn>(hPawn);
+			if (!playerPawn) continue;
+
+			auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
+
+			CS2::C_CSPlayerPawn* localPlayer = *reinterpret_cast<CS2::C_CSPlayerPawn**>(CS2::Offsets::dwLocalPlayerPawn);
+			if (playerPawn == localPlayer) continue;
+			if (entityController->m_iTeamNum() == localPlayer->m_iTeamNum()) continue;
+			if ((int)playerPawn->m_iHealth() <= 0) continue;
+			CS2::CGameSceneNode* pNode = playerPawn->m_pGameSceneNode();
+			if (!pNode) continue;
+
+			uintptr_t nodeAddr = reinterpret_cast<uintptr_t>(pNode);
+			uintptr_t boneArrayPtrAddr = nodeAddr + 0x190 + 0x80;
+			BoneJointData* pBoneArray = nullptr;
+			
+			pBoneArray = *reinterpret_cast<BoneJointData**>(boneArrayPtrAddr);
+			if (!pBoneArray)
+				continue;
+
+			ImVec2 bonePositions[28];
+			for (int idx = 0; idx < 28; idx++) {
+				bonePositions[idx] = ImVec2(-10.0f, 0.0f);
+			}
+
+			auto& bonePairs = CS2::bones;
+			auto& boneIndices = CS2::bonesToRead;
+
+			for (int boneIndex : boneIndices) {
+				if (!W2S(bonePositions[boneIndex], pBoneArray[boneIndex].pos)) {
+					bonePositions[boneIndex] = ImVec2(-10.0f, -10.0f); // Off-screen
+				}
+			}
+
+			// Draw bones using bonePairs
+			for (const auto& [start, end] : bonePairs) {
+				if (bonePositions[start].x >= 0 && bonePositions[end].x >= 0) {
+					ImGui::GetBackgroundDrawList()->AddLine(
+						bonePositions[start],
+						bonePositions[end],
+						IM_COL32(100, 255, 100, 200), 2.0f
+					);
+				}
+			}
+
+			ImVec2 min, max;
+			drawBox(std::span<BoneJointData>(pBoneArray, 28), &min, &max);
+
+			float healthPerc = (float)playerPawn->m_iHealth() / (float)playerPawn->m_iMaxHealth();
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(min.x - 4.0f, min.y),
+				ImVec2(min.x - 2.0f, max.y),
+				IM_COL32(0, 0, 0, 150)
+			);
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(min.x - 4.0f, max.y - (max.y - min.y) * healthPerc),
+				ImVec2(min.x - 2.0f, max.y),
+				IM_COL32(255 - (int)(255 * healthPerc), (int)(255 * healthPerc), 0, 255)
+			);
+
+			float armorPerc = (float)playerPawn->m_ArmorValue() / 100.0f;
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(max.x + 2.0f, min.y),
+				ImVec2(max.x + 4.0f, max.y),
+				IM_COL32(0, 0, 0, 150)
+			);
+			ImGui::GetBackgroundDrawList()->AddRectFilled(
+				ImVec2(max.x + 2.0f, max.y - (max.y - min.y) * armorPerc),
+				ImVec2(max.x + 4.0f, max.y),
+				IM_COL32(100, 100, 255, 255)
+			);
+
+			auto name = entityController->m_sSanitizedPlayerName();
+			if (name) {
+				ImGui::GetBackgroundDrawList()->AddText(
+					ImVec2(min.x + ((max.x - min.x) / 2) - (ImGui::CalcTextSize(name).x / 2), max.y + 2.0f),
+					IM_COL32(255, 255, 255, 255),
+					name
+				);
+			}
+		}
 
 		if (takesFocus) {
 			ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
@@ -77,12 +245,12 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 							auto* entityController = CS2::CEntityList::GetEntityByIndex<CS2::CCSPlayerController>(i);
 							if (!entityController) continue;
 
-							auto hPawn = entityController->m_hPlayerPawn();
+							auto& hPawn = entityController->m_hPlayerPawn();
 							if (!hPawn.IsValid()) continue;
 							auto* playerPawn = CS2::CEntityList::GetEntityByHandle<CS2::C_CSPlayerPawn>(hPawn);
 							if (!playerPawn) continue;
 
-							auto pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
+							auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
 
 							const char* sanitizedName = entityController->m_sSanitizedPlayerName();
 
