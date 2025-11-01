@@ -151,7 +151,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EntityESP.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PlayerESP.cpp" />
+    <ClCompile Include="SchemaExplorer.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
     <ClCompile Include="vendor\imgui\imgui_demo.cpp" />
     <ClCompile Include="vendor\imgui\imgui_draw.cpp" />
@@ -159,8 +162,13 @@
     <ClCompile Include="vendor\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="WorldTint.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EntityESP.h" />
+    <ClInclude Include="Feature.h" />
+    <ClInclude Include="PlayerESP.h" />
+    <ClInclude Include="SchemaExplorer.h" />
     <ClInclude Include="sdk-gen.h" />
     <ClInclude Include="sdk.h" />
     <ClInclude Include="vendor\imgui\CompiledShaderPS.hpp" />
@@ -173,6 +181,7 @@
     <ClInclude Include="vendor\imgui\imstb_rectpack.h" />
     <ClInclude Include="vendor\imgui\imstb_textedit.h" />
     <ClInclude Include="vendor\imgui\imstb_truetype.h" />
+    <ClInclude Include="WorldTint.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

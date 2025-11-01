@@ -57,34 +57,34 @@ namespace CS2 {
 	class CCSPlayerController;
 	class C_CSPlayerPawn;
 	namespace Offsets {
-		uintptr_t dwEntityList = *reinterpret_cast<uintptr_t*>(
+		inline uintptr_t dwEntityList = *reinterpret_cast<uintptr_t*>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1FB15D0
 			);
 
-		ViewMatrix_t* viewMatrix = reinterpret_cast<ViewMatrix_t*>(
+		inline ViewMatrix_t* viewMatrix = reinterpret_cast<ViewMatrix_t*>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E2AEC0
 			);
 
-		int32_t* width = reinterpret_cast<int32_t*>(
+		inline int32_t* width = reinterpret_cast<int32_t*>(
 			(uintptr_t)GetModuleHandleA("engine2.dll") + 0x8ED620
 			);
-		int32_t* height = reinterpret_cast<int32_t*>(
+		inline int32_t* height = reinterpret_cast<int32_t*>(
 			(uintptr_t)GetModuleHandleA("engine2.dll") + 0x8ED624
 			);
-		void* dwLocalPlayerController = reinterpret_cast<CCSPlayerController**>(
+		inline void* dwLocalPlayerController = reinterpret_cast<CCSPlayerController**>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E16870
 			);
-		void* dwLocalPlayerPawn = reinterpret_cast<C_CSPlayerPawn**>(
+		inline void* dwLocalPlayerPawn = reinterpret_cast<C_CSPlayerPawn**>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1BE7DA0
 			);
 	} // namespace Offsets
 
 	using DXGIPresentFn_t = HRESULT(__stdcall*)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
-	DXGIPresentFn_t dxgiPresentFn = nullptr;
-	DXGIPresentFn_t originalDXGIPresent = nullptr;
+	inline DXGIPresentFn_t dxgiPresentFn = nullptr;
+	inline DXGIPresentFn_t originalDXGIPresent = nullptr;
 
 	using ConMsgFn_t = void(__stdcall*)(const char* fmt, ...);
-	ConMsgFn_t ConMsg = nullptr;
+	inline ConMsgFn_t ConMsg = nullptr;
 
 	template <int Index, typename ReturnType, typename... Args>
 	inline ReturnType CallVFunc(void* pThis, Args... args) {
@@ -393,7 +393,7 @@ namespace CS2 {
 		}
 	};
 
-	void initPtrs() {
+	inline void initPtrs() {
 		uintptr_t t0Base = (uintptr_t)GetModuleHandleA("tier0.dll");
 		uintptr_t conMsgA = t0Base + 0x7CDE0; // tier0.dll!ConMsg
 		ConMsg = (ConMsgFn_t)(conMsgA);
@@ -402,7 +402,7 @@ namespace CS2 {
 		LOGINFO("ConMsg address: 0x%p", (void*)conMsgA);
 	}
 
-	void resetPtrs() {
+	inline void resetPtrs() {
 		// TODO
 	}
 
@@ -695,7 +695,7 @@ namespace CS2 {
 		inline IMatchmaking* GMatchmaking = nullptr;
 		inline ISceneSystem* GSceneSystem = nullptr;
 		inline CTraceManager* GTraceManager = nullptr;
-		bool setupInterfaces() {
+		inline bool setupInterfaces() {
 			bool success = true;
 
 			const auto engineRegisterList = CInterfaceRegister::GetRegisterList(L"engine2.dll");
