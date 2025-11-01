@@ -5,9 +5,12 @@
 #include <format>
 #include <chrono>
 #include <unordered_map>
+#include <bitset>
 
 #include "sdk.h"
 #include "sdk-gen.h"
+
+#include <minhook.h>
 
 // Death tracking
 using SteadyClock = std::chrono::steady_clock;
@@ -83,25 +86,24 @@ bool calcBoxSize(std::span<BoneJointData> boneData, ImVec2& min, ImVec2& max) {
         {max3D.x, max3D.y, max3D.z},
     };
 
-    bool visible = false;
+    bool visible = true;
     ImVec2 projected;
     min = { FLT_MAX, FLT_MAX };
     max = { -FLT_MAX, -FLT_MAX };
 
     for (const auto& corner : corners) {
         if (W2S(projected, corner)) {
-            visible = true;
             if (projected.x < min.x) min.x = projected.x;
             if (projected.y < min.y) min.y = projected.y;
             if (projected.x > max.x) max.x = projected.x;
             if (projected.y > max.y) max.y = projected.y;
-        }
+		}
+		else {
+			visible = false;
+		}
     }
 
-    if (!visible)
-        return false;
-
-    return true;
+	return visible;
 }
 
 void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* oMax = nullptr, ImColor color = ImColor(255, 255, 255, 255)) {
@@ -127,6 +129,9 @@ void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* 
 	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x - boxWidth * cornerLength, max.y), color, 1.5f);
 	drawList->AddLine(ImVec2(max.x, max.y), ImVec2(max.x, max.y - boxHeight * cornerLength), color, 1.5f);
 
+	ImColor boxColor(255, 255, 255, 50);
+	drawList->AddRectFilled(ImVec2(min.x, min.y), ImVec2(max.x, max.y), boxColor);
+
 	if (oMin) *oMin = min;
 	if (oMax) *oMax = max;
 }
@@ -134,6 +139,19 @@ void drawBox(std::span<BoneJointData> boneData, ImVec2* oMin = nullptr, ImVec2* 
 DWORD WINAPI MainThread(LPVOID lpParam) {
 	CS2::initPtrs();
 	CS2::Interfaces::setupInterfaces();
+
+#if 0
+	CS2::Pattern patCreateMove("48 89 05 ? ? ? ? 0F 57 C0 0F 11 05");
+	auto pCSGOInput = reinterpret_cast<CS2::CSGOInput*>(patCreateMove.scanNow("client.dll").getRIP().getAddress());
+	void* pCreateMove = pCSGOInput->getCreateMovePtr();
+#endif
+
+	CS2::Pattern patRenderBatchList("4C 8B DC 53 48 81 EC ? ? ? ? 83 79");
+	auto pRenderBatchList = patRenderBatchList.scanNow("scenesystem.dll").getAddress();
+
+	MH_Initialize();
+	//MH_CreateHook(pCreateMove, &hkCreateMove, reinterpret_cast<void**>(&originalCreateMove));
+	//MH_EnableHook(pCreateMove);
 
 	static bool* outerTakesFocus = nullptr;
 	
@@ -151,6 +169,13 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 	static int navigationFrameDelay = 0; 
 	static char fieldNameSearchBuf[256] = "";
 	static char fieldTypeSearchBuf[256] = "";
+	
+	// ESP Settings
+	static bool enableEntityESP = false;
+	
+	// World Tint Settings
+	static bool enableWorldTint = false;
+	static float tintColor[3] = { 1.0f, 0.5f, 1.0f }; // Purple by default (R, G, B)
 	static char fieldScopeSearchBuf[256] = "";
 	static char fieldClassSearchBuf[256] = "";
 
@@ -158,21 +183,34 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 	presentManager.setOnPresentCallback([](bool& takesFocus, IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
 		outerTakesFocus = &takesFocus;
 
-		for (int i = 1; i < 64; i++) {
-			auto* entityController = CS2::CEntityList::GetEntityByIndex<CS2::CCSPlayerController>(i);
-			if (!entityController) continue;
+		static auto& entSys = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem;
 
-			auto& hPawn = entityController->m_hPlayerPawn();
+		for (int i = 1; i < 64; i++) {
+			CS2::C_BaseEntity* baseEnt = entSys->Get(i);
+			if (!baseEnt) continue;
+
+			CS2::CEntityIdentity* identity = baseEnt->m_pGameSceneNode()->m_pOwner()->m_pEntity();
+			if (!identity) continue;
+
+			constexpr auto expectedName = "cs_player_controller";
+			if (std::strcmp(identity->GetDesignerName(), expectedName) != 0)
+				continue;
+
+			CS2::CCSPlayerController* con = reinterpret_cast<CS2::CCSPlayerController*>(identity->pInstance);
+			if (!con) continue;
+
+			auto& hPawn = con->m_hPlayerPawn();
 			if (!hPawn.IsValid()) continue;
-			auto* playerPawn = CS2::CEntityList::GetEntityByHandle<CS2::C_CSPlayerPawn>(hPawn);
+			auto* playerPawn = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem->Get<CS2::C_CSPlayerPawn>(hPawn);
 			if (!playerPawn) continue;
 
+			auto gsn = con->m_pGameSceneNode();
 			auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
 
 			CS2::C_CSPlayerPawn* localPlayer = *reinterpret_cast<CS2::C_CSPlayerPawn**>(CS2::Offsets::dwLocalPlayerPawn);
 			if (playerPawn == localPlayer) continue;
 
-			if (entityController->m_iTeamNum() == localPlayer->m_iTeamNum()) continue;
+			if (con->m_iTeamNum() == localPlayer->m_iTeamNum()) continue;
 
 			// Track death times
 			int health = (int)playerPawn->m_iHealth();
@@ -307,7 +345,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 				hasArmor ? IM_COL32(50, 150, 255, 255) : IM_COL32(0, 0, 0, 200)
 			);
 
-			const char* name = entityController->m_sSanitizedPlayerName();
+			const char* name = con->m_sSanitizedPlayerName();
 			ImVec2 nameSize = ImGui::CalcTextSize(name);
 			ImGui::GetBackgroundDrawList()->AddText(
 				ImVec2(min.x + ((max.x - min.x) / 2) - (nameSize.x / 2), min.y - nameSize.y - 4),
@@ -320,6 +358,39 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 			uint64_t mSpotted;
 			memcpy(&mSpotted, playerPawn->m_entitySpottedState().m_bSpottedByMask(), sizeof(uint64_t));
 			bool spotted = (mSpotted & (1ULL << ID)) != 0;*/
+		}
+
+		if (enableEntityESP) {
+			for (int i = 0; i < 0xFFFF; i++) {
+				auto* baseEnt = entSys->Get(i);
+				if (!baseEnt) continue;
+				auto* gameSceneNode = baseEnt->m_pGameSceneNode();
+				if (!gameSceneNode) continue;
+				auto* owner = gameSceneNode->m_pOwner();
+				if (!owner) continue;
+				auto* identity = owner->m_pEntity();
+				if (!identity) continue;
+				const char* designerName = identity->GetDesignerName();
+				if (!designerName) continue;
+				auto& pos = gameSceneNode->m_vecAbsOrigin();
+
+				ImVec2 screenPos;
+				if (!W2S(screenPos, pos)) continue;
+
+				ImVec2 textSize = ImGui::CalcTextSize(designerName);
+				ImVec2 textPos = ImVec2(screenPos.x - textSize.x / 2, screenPos.y);
+				
+				ImGui::GetBackgroundDrawList()->AddRectFilled(
+					ImVec2(textPos.x - 2, textPos.y - 2),
+					ImVec2(textPos.x + textSize.x + 2, textPos.y + textSize.y + 2),
+					IM_COL32(0, 0, 0, 150)
+				);
+				ImGui::GetBackgroundDrawList()->AddText(
+					textPos,
+					IM_COL32(200, 200, 255, 255),
+					designerName
+				);
+			}
 		}
 
 		if (takesFocus) {
@@ -341,58 +412,310 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 				if (requestedTab == 0) requestedTab = -1;
 				
 				if (ImGui::BeginTabItem("Entity Debug", nullptr, entityFlags)) {
+					auto& eSys = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem;
+
+					ImGui::Spacing();
+					ImGui::Checkbox("Enable Entity ESP", &enableEntityESP);
+					ImGui::SameLine();
+					ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "(Shows entity names in-game)");
 					ImGui::Spacing();
 					ImGui::Text("Entity List Debug:");
 					ImGui::Separator();
 					ImGui::Spacing();
 					
 					ImGui::BeginChild("EntityList", ImVec2(0, 0), false);
-
-					if (ImGui::BeginTable("EntityTable", 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit)) {
-						// Table headers
-						ImGui::TableSetupColumn("Name");
-						ImGui::TableSetupColumn("Index");
-						ImGui::TableSetupColumn("Health");
-						ImGui::TableSetupColumn("Ping");
-						ImGui::TableSetupColumn("Position");
-						ImGui::TableSetupColumn("Extras");
-						ImGui::TableHeadersRow();
-
-						for (int i = 1; i < 64; i++) {
-							auto* entityController = CS2::CEntityList::GetEntityByIndex<CS2::CCSPlayerController>(i);
-							if (!entityController) continue;
-
-							auto& hPawn = entityController->m_hPlayerPawn();
-							if (!hPawn.IsValid()) continue;
-							auto* playerPawn = CS2::CEntityList::GetEntityByHandle<CS2::C_CSPlayerPawn>(hPawn);
-							if (!playerPawn) continue;
-
-							auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
-
-							const char* sanitizedName = entityController->m_sSanitizedPlayerName();
-
-							auto test = playerPawn->m_nSimulationTick();
-							auto test2 = playerPawn->m_flSimulationTime();
-
-							auto lifetime = entityController->m_iPawnLifetimeEnd();
-
-							ImGui::TableNextRow();
-							ImGui::TableNextColumn();
-							ImGui::Text("%s", sanitizedName ? sanitizedName : "N/A");
-							ImGui::TableNextColumn();
-							ImGui::Text("%d", i);
-							ImGui::TableNextColumn();
-							ImGui::Text("%d", playerPawn->m_iHealth());
-							ImGui::TableNextColumn();
-							ImGui::Text("%d", entityController->m_iPing());
-							ImGui::TableNextColumn();
-							ImGui::Text("(%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
-							ImGui::TableNextColumn();
-							ImGui::Text("death time %d.  Test %d %f", lifetime, test, test2);
-						}
-						ImGui::EndTable();
-					}
 					
+					if (ImGui::CollapsingHeader("Players")) {
+						if (ImGui::BeginTable("EntityTable", 6, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit)) {
+							// Table headers
+							ImGui::TableSetupColumn("Name");
+							ImGui::TableSetupColumn("Index");
+							ImGui::TableSetupColumn("Health");
+							ImGui::TableSetupColumn("Ping");
+							ImGui::TableSetupColumn("Position");
+							ImGui::TableSetupColumn("Extras");
+							ImGui::TableHeadersRow();
+
+							for (int i = 1; i < 64; i++) {
+								auto* entityController = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem->Get<CS2::CCSPlayerController>(i);
+								if (!entityController) continue;
+
+								auto& hPawn = entityController->m_hPlayerPawn();
+								if (!hPawn.IsValid()) continue;
+								auto* playerPawn = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem->Get<CS2::C_CSPlayerPawn>(hPawn);
+								if (!playerPawn) continue;
+
+								auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
+
+								const char* sanitizedName = entityController->m_sSanitizedPlayerName();
+
+								auto test = playerPawn->m_nSimulationTick();
+								auto test2 = playerPawn->m_flSimulationTime();
+
+								auto lifetime = entityController->m_iPawnLifetimeEnd();
+
+								ImGui::TableNextRow();
+								ImGui::TableNextColumn();
+								ImGui::Text("%s", sanitizedName ? sanitizedName : "N/A");
+								ImGui::TableNextColumn();
+								ImGui::Text("%d", i);
+								ImGui::TableNextColumn();
+								ImGui::Text("%d", playerPawn->m_iHealth());
+								ImGui::TableNextColumn();
+								ImGui::Text("%d", entityController->m_iPing());
+								ImGui::TableNextColumn();
+								ImGui::Text("(%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
+								ImGui::TableNextColumn();
+								ImGui::Text("death time %d.  Test %d %f", lifetime, test, test2);
+							}
+							ImGui::EndTable();
+						}
+					}
+
+					if (ImGui::CollapsingHeader("World Tint")) {
+						ImGui::Checkbox("Enable World Tint", &enableWorldTint);
+						ImGui::ColorEdit3("Tint Color", tintColor);
+						
+						if (enableWorldTint) {
+							auto& eSys = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem;
+							if (!eSys) {
+								ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Error: Entity system not available!");
+							} else {
+								auto localPlayer = *reinterpret_cast<CS2::C_CSPlayerPawn**>(CS2::Offsets::dwLocalPlayerPawn);
+								
+								// Convert float colors (0-1) to byte colors (0-255) - MUST BE STATIC!
+								static CS2::Color tintCol = CS2::Color(255, 128, 255, 255);
+								tintCol = CS2::Color(
+									static_cast<uint8_t>(tintColor[0] * 255),
+									static_cast<uint8_t>(tintColor[1] * 255),
+									static_cast<uint8_t>(tintColor[2] * 255),
+									255
+								);
+								
+								// Apply fog tint via camera services
+								if (localPlayer && localPlayer->m_pCameraServices()) {
+									auto* fogColor = localPlayer->m_pCameraServices()->m_OverrideFogColor();
+									auto* fogEnabled = localPlayer->m_pCameraServices()->m_bOverrideFogColor();
+									if (fogColor && fogEnabled) {
+										*fogColor = tintCol;
+										*fogEnabled = true;
+									}
+								}
+								
+								// Find and tint sky
+								for (int i = 0; i < 0xFFFF; i++) {
+									auto* baseEnt = eSys->Get(i);
+									if (!baseEnt) continue;
+
+									auto* gameSceneNode = baseEnt->m_pGameSceneNode();
+									if (!gameSceneNode) continue;
+
+									auto* owner = gameSceneNode->m_pOwner();
+									if (!owner) continue;
+
+									auto* identity = owner->m_pEntity();
+									if (!identity) continue;
+
+									const char* designerName = identity->GetDesignerName();
+									if (!designerName) continue;
+
+									// Tint sky
+									if (std::strcmp(designerName, "env_sky") == 0) {
+										CS2::C_EnvSky* pSky = reinterpret_cast<CS2::C_EnvSky*>(identity->pInstance);
+
+										LOGINFO("Found sky entity at index %d, applying tint", i);
+
+										if (pSky) {
+											pSky->m_bEnabled() = true;
+											pSky->m_vTintColor() = tintCol;
+											pSky->m_vTintColorLightingOnly() = tintCol;
+										}
+									} else
+									if (std::strcmp(designerName, "env_combined_light_probe_volume") == 0) {
+										CS2::C_EnvCombinedLightProbeVolume* pProbe = reinterpret_cast<CS2::C_EnvCombinedLightProbeVolume*>(baseEnt);
+										LOGINFO("Found light probe entity at index %d, applying tint", i);
+										if (pProbe) {
+											pProbe->m_Entity_Color() = tintCol;
+										}
+									} else
+									if (std::strcmp(designerName, "light_barn") == 0) {
+										CS2::C_BarnLight* pBarnLight = reinterpret_cast<CS2::C_BarnLight*>(baseEnt);
+										pBarnLight->m_Color() = tintCol;
+									} else
+									if (std::strcmp(designerName, "light_rect") == 0) {
+										CS2::C_RectLight* pRectLight = reinterpret_cast<CS2::C_RectLight*>(baseEnt);
+										LOGINFO("Found rect light entity at index %d, applying tint", i);
+										pRectLight->m_Color() = tintCol;
+									} 
+								}
+							
+							ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "World tint active!");
+							ImGui::Text("Note: Restart map or toggle off/on to see changes");
+							}
+						} else {
+							// Reset when disabled
+							auto localPlayer = *reinterpret_cast<CS2::C_CSPlayerPawn**>(CS2::Offsets::dwLocalPlayerPawn);
+							if (localPlayer && localPlayer->m_pCameraServices()) {
+								auto* fogEnabled = localPlayer->m_pCameraServices()->m_bOverrideFogColor();
+								if (fogEnabled) {
+									*fogEnabled = false;
+								}
+							}
+						}
+					}
+
+					if (ImGui::CollapsingHeader("All Entities", ImGuiTreeNodeFlags_DefaultOpen)) {
+						static char entitySearchBuf[256] = "";
+						
+						ImGui::SetNextItemWidth(400);
+						ImGui::InputTextWithHint("##EntitySearch", "Search entities by name...", entitySearchBuf, sizeof(entitySearchBuf));
+						
+						ImGui::Spacing();
+						
+						std::string entitySearch = entitySearchBuf;
+						std::transform(entitySearch.begin(), entitySearch.end(), entitySearch.begin(), ::tolower);
+						
+						auto& eSys = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem;
+						
+						struct EntityInfo {
+							int index;
+							const char* name;
+							CS2::Vector3 pos;
+							bool hasValidData;
+							uintptr_t baseEntPtr;
+						};
+						std::vector<EntityInfo> entities;
+						
+						int validCount = 0;
+						int totalSlots = 0;
+						
+						for (int i = 0; i < 0xFFFF; i++) {
+							auto* baseEnt = eSys->Get(i);
+							
+							if (!baseEnt) continue;
+							
+							totalSlots++;
+							
+							EntityInfo info{};
+							info.index = i;
+							info.name = nullptr;
+							info.pos = CS2::Vector3{0, 0, 0};
+							info.hasValidData = false;
+							info.baseEntPtr = reinterpret_cast<uintptr_t>(baseEnt);
+							
+							auto* gameSceneNode = baseEnt->m_pGameSceneNode();
+							if (gameSceneNode && gameSceneNode->m_pOwner()) {
+								auto* identity = gameSceneNode->m_pOwner()->m_pEntity();
+								if (identity) {
+									const char* designerName = identity->GetDesignerName();
+									if (designerName) {
+										info.name = designerName;
+										info.hasValidData = true;
+										info.pos = gameSceneNode->m_vecAbsOrigin();
+										validCount++;
+									}
+								}
+							}
+							
+							if (!entitySearch.empty()) {
+								std::string nameLower = info.name ? info.name : "";
+								std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+								if (nameLower.find(entitySearch) == std::string::npos) continue;
+							}
+							
+							entities.push_back(info);
+						}
+						
+						ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "Found %d entities with data / %d occupied slots", validCount, totalSlots);
+						ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.5f, 1.0f), "Note: Many entities may not have GetDesignerName() - they still exist but show as 'N/A'");
+						ImGui::Separator();
+						ImGui::Spacing();
+
+						if (ImGui::BeginTable("AllEntitiesTable", 5, ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Sortable)) {
+							ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed, 60.0f);
+							ImGui::TableSetupColumn("Entity Type", ImGuiTableColumnFlags_WidthStretch);
+							ImGui::TableSetupColumn("Position", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+							ImGui::TableSetupColumn("Pointer", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+							ImGui::TableSetupColumn("Valid", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+							ImGui::TableHeadersRow();
+							
+							if (ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs()) {
+								if (sortSpecs->SpecsDirty) {
+									if (sortSpecs->SpecsCount > 0) {
+										const ImGuiTableColumnSortSpecs& spec = sortSpecs->Specs[0];
+										
+										std::sort(entities.begin(), entities.end(), [&](const EntityInfo& a, const EntityInfo& b) {
+											int result = 0;
+											switch (spec.ColumnIndex) {
+												case 0: // Index
+													result = a.index - b.index;
+													break;
+												case 1: // Entity Type
+													result = strcmp(a.name ? a.name : "", b.name ? b.name : "");
+													break;
+												case 4: // Valid
+													result = (int)a.hasValidData - (int)b.hasValidData;
+													break;
+											}
+											return spec.SortDirection == ImGuiSortDirection_Ascending ? (result < 0) : (result > 0);
+										});
+									}
+									sortSpecs->SpecsDirty = false;
+								}
+							}
+							
+							for (const auto& entity : entities) {
+								ImGui::TableNextRow();
+								
+								ImGui::TableNextColumn();
+								ImGui::Text("%d", entity.index);
+								
+								ImGui::TableNextColumn();
+								if (entity.name) {
+									ImGui::TextColored(ImVec4(0.7f, 0.9f, 0.7f, 1.0f), "%s", entity.name);
+								} else {
+									ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "N/A");
+								}
+								
+								if (ImGui::BeginPopupContextItem()) {
+									if (entity.name && ImGui::MenuItem("Copy Entity Type")) {
+										ImGui::SetClipboardText(entity.name);
+									}
+									if (ImGui::MenuItem("Copy Index")) {
+										char indexStr[32];
+										sprintf_s(indexStr, "%d", entity.index);
+										ImGui::SetClipboardText(indexStr);
+									}
+									if (ImGui::MenuItem("Copy Pointer")) {
+										char ptrStr[32];
+										sprintf_s(ptrStr, "0x%llX", entity.baseEntPtr);
+										ImGui::SetClipboardText(ptrStr);
+									}
+									ImGui::EndPopup();
+								}
+								
+								ImGui::TableNextColumn();
+								if (entity.hasValidData) {
+									ImGui::Text("(%.1f, %.1f, %.1f)", entity.pos.x, entity.pos.y, entity.pos.z);
+								} else {
+									ImGui::TextDisabled("N/A");
+								}
+								
+								ImGui::TableNextColumn();
+								ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.8f, 1.0f), "0x%llX", entity.baseEntPtr);
+								
+								ImGui::TableNextColumn();
+								if (entity.hasValidData) {
+									ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Yes");
+								} else {
+									ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No");
+								}
+							}
+							
+							ImGui::EndTable();
+						}
+					}
+
 					ImGui::EndChild();
 					ImGui::EndTabItem();
 				}
@@ -1088,6 +1411,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 		Sleep(100);
 	}
 
+	MH_Uninitialize();
 
 	presentManager.shutdown();
 	return 0;

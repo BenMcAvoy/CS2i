@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <dxgi.h>
+#include <Psapi.h>
 
 #include <cstdint>
 #include <vector>
@@ -57,11 +58,11 @@ namespace CS2 {
 	class C_CSPlayerPawn;
 	namespace Offsets {
 		uintptr_t dwEntityList = *reinterpret_cast<uintptr_t*>(
-			(uintptr_t)GetModuleHandleA("client.dll") + 0x1D07A80
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1FB15D0
 			);
 
 		ViewMatrix_t* viewMatrix = reinterpret_cast<ViewMatrix_t*>(
-			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E25F30
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E2AEC0
 			);
 
 		int32_t* width = reinterpret_cast<int32_t*>(
@@ -71,10 +72,10 @@ namespace CS2 {
 			(uintptr_t)GetModuleHandleA("engine2.dll") + 0x8ED624
 			);
 		void* dwLocalPlayerController = reinterpret_cast<CCSPlayerController**>(
-			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E11978
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E16870
 			);
 		void* dwLocalPlayerPawn = reinterpret_cast<C_CSPlayerPawn**>(
-			(uintptr_t)GetModuleHandleA("client.dll") + 0x1BE2D10
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1BE7DA0
 			);
 	} // namespace Offsets
 
@@ -107,6 +108,99 @@ namespace CS2 {
 
 		return uKey;
 	}
+
+	class Pattern {
+	private:
+		std::vector<int> pattern_;
+		uintptr_t foundAddress_ = 0;
+
+		static std::vector<int> parsePattern(const char* patternStr) {
+			std::vector<int> result;
+			const char* p = patternStr;
+			
+			while (*p) {
+				while (*p == ' ' || *p == '\t') p++;
+				if (!*p) break;
+
+				if (*p == '?') {
+					result.push_back(-1);
+					p++;
+					if (*p == '?') p++;
+				}
+				else {
+					char byteStr[3] = { 0 };
+					if (*p && *(p + 1)) {
+						byteStr[0] = *p++;
+						byteStr[1] = *p++;
+						result.push_back(static_cast<int>(strtol(byteStr, nullptr, 16)));
+					}
+				}
+			}
+			
+			return result;
+		}
+
+		static bool comparePattern(const uint8_t* data, const std::vector<int>& pattern) {
+			for (size_t i = 0; i < pattern.size(); i++) {
+				if (pattern[i] != -1 && data[i] != static_cast<uint8_t>(pattern[i])) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+	public:
+		Pattern(const char* patternStr) : pattern_(parsePattern(patternStr)) {}
+
+		Pattern& scanNow(const char* moduleName) {
+			HMODULE hModule = GetModuleHandleA(moduleName);
+			if (!hModule) {
+				foundAddress_ = 0;
+				return *this;
+			}
+
+			MODULEINFO modInfo;
+			if (!GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(MODULEINFO))) {
+				foundAddress_ = 0;
+				return *this;
+			}
+
+			uintptr_t baseAddress = reinterpret_cast<uintptr_t>(modInfo.lpBaseOfDll);
+			size_t moduleSize = modInfo.SizeOfImage;
+
+			for (size_t i = 0; i < moduleSize - pattern_.size(); i++) {
+				if (comparePattern(reinterpret_cast<uint8_t*>(baseAddress + i), pattern_)) {
+					foundAddress_ = baseAddress + i;
+					return *this;
+				}
+			}
+
+			foundAddress_ = 0;
+			return *this;
+		}
+
+		Pattern& getRIP(int offset = 3, int instructionSize = 7) {
+			if (foundAddress_ == 0) {
+				return *this;
+			}
+
+			int32_t relativeOffset = *reinterpret_cast<int32_t*>(foundAddress_ + offset);
+			foundAddress_ = foundAddress_ + instructionSize + relativeOffset;
+			return *this;
+		}
+
+		uintptr_t getAddress() const {
+			return foundAddress_;
+		}
+
+		operator uintptr_t() const {
+			return foundAddress_;
+		}
+
+		bool isValid() const {
+			return foundAddress_ != 0;
+		}
+	};
 
 	template<typename D>
 	struct CHashAllocatedBlob {
@@ -331,12 +425,84 @@ namespace CS2 {
 			return CallVFunc<22u, C_BaseEntity*>(this, index);
 		}
 	};
+
 	class ISchemaSystem;
+
+#define INVALID_EHANDLE_INDEX 0xFFFFFFFF
+#define ENT_ENTRY_MASK 0x7FFF
+#define NUM_SERIAL_NUM_SHIFT_BITS 15
+#define ENT_MAX_NETWORKED_ENTRY 16384
+
+	class CHandle {
+	public:
+		CHandle() : index(INVALID_EHANDLE_INDEX) {}
+		CHandle(const int nEntry, const int nSerial) noexcept {
+			index = nEntry | (nSerial << NUM_SERIAL_NUM_SHIFT_BITS);
+		}
+		CHandle(const uint32_t nIndex) noexcept : index(nIndex) {}
+
+		bool operator==(const CHandle& other) const noexcept {
+			return index == other.index;
+		}
+
+		bool IsValid() const noexcept {
+			return index != INVALID_EHANDLE_INDEX;
+		}
+
+		int GetEntryIndex() const noexcept {
+			if (!IsValid())
+				return ENT_ENTRY_MASK;
+			return index & ENT_ENTRY_MASK;
+		}
+
+		int GetSerialNumber() const noexcept {
+			if (!IsValid())
+				return 0;
+			return index >> NUM_SERIAL_NUM_SHIFT_BITS;
+		}
+
+		uint32_t GetIndex() const noexcept {
+			return index;
+		}
+
+		int ID() const noexcept {
+			return index & 0x1FF;
+		}
+
+	private:
+		uint32_t index;
+	};
+	class C_GameEntitySystem {
+	private:
+		/* 0x000 */ char pad_0x000[0x20F0];
+	public:
+		/* 0x20F0 */ int nMaxEntities;
+
+	public:
+		template <typename T = C_BaseEntity>
+		T* Get(int index) {
+			return reinterpret_cast<T*>(this->GetEntityByIndex(index));
+		}
+
+		template <typename T = C_BaseEntity>
+		T* Get(const CHandle& handle) {
+			return Get<T>(handle.GetEntryIndex());
+		}
+
+	private:
+		void* GetEntityByIndex(int entryIndex) noexcept {
+			static auto addy = Pattern("4C 8D 49 ? 81 FA").scanNow("client.dll").getAddress();
+			using GetEntityByIndexFn_t = void* (__thiscall*)(void*, int);
+			static auto fnGetEntityByIndex = reinterpret_cast<GetEntityByIndexFn_t>(addy);
+			return fnGetEntityByIndex(this, entryIndex);
+		}
+	};
+
 	class IGameResourceService {
 	private:
-		/* 0x0000 */ char pad_0x0000[0x20F0];
+		/* 0x0000 */ char pad_0x0000[0x58];
 	public:
-		/* 0x20F0 */ int highestEntityIndex;
+		/* 0x0058 */ C_GameEntitySystem* m_pGameEntitySystem;
 	};
 	class IMatchmaking;
 
@@ -775,75 +941,6 @@ namespace CS2 {
 #define SCHEMA_ADD_PFIELD(TYPE, NAME, FIELD) SCHEMA_ADD_PFIELD_OFFSET(TYPE, NAME, FIELD, 0U)
 
 	// Main SDK. All above is for schema reflection and hooking...
-
-#define INVALID_EHANDLE_INDEX 0xFFFFFFFF
-#define ENT_ENTRY_MASK 0x7FFF
-#define NUM_SERIAL_NUM_SHIFT_BITS 15
-#define ENT_MAX_NETWORKED_ENTRY 16384
-
-	class CHandle {
-	public:
-		CHandle() : index(INVALID_EHANDLE_INDEX) {}
-		CHandle(const int nEntry, const int nSerial) noexcept {
-			index = nEntry | (nSerial << NUM_SERIAL_NUM_SHIFT_BITS);
-		}
-		CHandle(const uint32_t nIndex) noexcept : index(nIndex) {}
-
-		bool operator==(const CHandle& other) const noexcept {
-			return index == other.index;
-		}
-
-		bool IsValid() const noexcept {
-			return index != INVALID_EHANDLE_INDEX;
-		}
-
-		int GetEntryIndex() const noexcept {
-			if (!IsValid())
-				return ENT_ENTRY_MASK;
-			return index & ENT_ENTRY_MASK;
-		}
-
-		int GetSerialNumber() const noexcept {
-			if (!IsValid())
-				return 0;
-			return index >> NUM_SERIAL_NUM_SHIFT_BITS;
-		}
-
-		uint32_t GetIndex() const noexcept {
-			return index;
-		}
-
-		int ID() const noexcept {
-			return index & 0x1FF;
-		}
-
-	private:
-		uint32_t index;
-	};
-
-	class CEntityList {
-	public:
-		template<typename T = void>
-		static T* GetEntityByHandle(const CHandle& handle) noexcept {
-			if (!handle.IsValid())
-				return nullptr;
-
-			return GetEntityByIndex<T>(handle.GetEntryIndex());
-		}
-
-		template<typename T = void>
-		static T* GetEntityByIndex(int entryIndex) noexcept {
-			int chunkIndex = entryIndex >> 9;
-			int chunkOffset = entryIndex & 0x1FF;
-
-			uintptr_t list = *reinterpret_cast<uintptr_t*>(Offsets::dwEntityList + (8 * chunkIndex + 16));
-			if (!list)
-				return nullptr;
-
-			uintptr_t entity = *reinterpret_cast<uintptr_t*>(list + 0x70 * chunkOffset);
-			return reinterpret_cast<T*>(entity);
-		}
-	};
 
 	class CEntityInstance;
 	class CEntityIdentity {
