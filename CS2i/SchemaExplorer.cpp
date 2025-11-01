@@ -54,10 +54,6 @@ void SchemaExplorer::renderEntityDebugTab() {
     auto& eSys = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem;
 
     ImGui::Spacing();
-    ImGui::Checkbox("Enable Entity ESP", &enableEntityESP);
-    ImGui::SameLine();
-    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "(Shows entity names in-game)");
-    ImGui::Spacing();
     ImGui::Text("Entity List Debug:");
     ImGui::Separator();
     ImGui::Spacing();
@@ -80,7 +76,7 @@ void SchemaExplorer::renderEntityDebugTab() {
 
                 auto& hPawn = entityController->m_hPlayerPawn();
                 if (!hPawn.IsValid()) continue;
-                auto* playerPawn = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem->Get<CS2::C_CSPlayerPawn>(hPawn);
+				auto* playerPawn = hPawn.Get();
                 if (!playerPawn) continue;
 
                 auto& pos = playerPawn->m_pGameSceneNode()->m_vecAbsOrigin();
@@ -534,6 +530,39 @@ void SchemaExplorer::renderTypeBrowserTab() {
                             }
                         }
                         ImGui::SetClipboardText(allSchemas.c_str());
+                    }
+                    if (ImGui::MenuItem("Copy hierarchy")) {
+                        std::stringstream hierarchy;
+                        hierarchy << typeScope->name << "::" << classInfo.name;
+						
+						// Build the inheritance chain
+						std::string currentBaseName;
+						auto bc = classInfo.baseClasses;
+						if (bc && bc->info && bc->info->name) {
+							currentBaseName = bc->info->name;
+							hierarchy << " : " << currentBaseName;
+						}
+						
+						// Keep traversing base classes
+						while (!currentBaseName.empty()) {
+							bool foundNext = false;
+							for (const auto& searchClassInfo : typeScope->declaredClasses) {
+								if (searchClassInfo.name == currentBaseName) {
+									auto nextBC = searchClassInfo.baseClasses;
+									if (nextBC && nextBC->info && nextBC->info->name) {
+										currentBaseName = nextBC->info->name;
+										hierarchy << " : " << currentBaseName;
+										foundNext = true;
+									}
+									break;
+								}
+							}
+							if (!foundNext) {
+								break;
+							}
+						}
+						
+						ImGui::SetClipboardText(hierarchy.str().c_str());
                     }
                     ImGui::EndPopup();
                 }

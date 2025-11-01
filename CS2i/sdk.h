@@ -428,11 +428,60 @@ namespace CS2 {
 
 	class ISchemaSystem;
 
+	template <typename T>
+	class CHandle;
+
+	class C_GameEntitySystem {
+	private:
+		/* 0x000 */ char pad_0x000[0x20F0];
+	public:
+		/* 0x20F0 */ int nMaxEntities;
+
+	public:
+		template <typename T = C_BaseEntity>
+		T* Get(int index) {
+			return reinterpret_cast<T*>(this->GetEntityByIndex(index));
+		}
+
+		template <typename T = C_BaseEntity, typename H> // H = handle type (doesn't matter)
+		T* Get(const CHandle<H>& handle) {
+			return Get<T>(handle.GetEntryIndex());
+		}
+
+	private:
+		void* GetEntityByIndex(int entryIndex) noexcept {
+			static auto addy = Pattern("4C 8D 49 ? 81 FA").scanNow("client.dll").getAddress();
+			using GetEntityByIndexFn_t = void* (__thiscall*)(void*, int);
+			static auto fnGetEntityByIndex = reinterpret_cast<GetEntityByIndexFn_t>(addy);
+			return fnGetEntityByIndex(this, entryIndex);
+		}
+	};
+
+	class IGameResourceService {
+	private:
+		/* 0x0000 */ char pad_0x0000[0x58];
+	public:
+		/* 0x0058 */ C_GameEntitySystem* m_pGameEntitySystem;
+	};
+	class IMatchmaking;
+	class ISceneSystem;
+	class CTraceManager;
+
+	namespace Interfaces {
+		inline IEngineClient* GEngineClient = nullptr;
+		inline ISchemaSystem* GSchemaSystem = nullptr;
+		inline IGameResourceService* GGameResourceService = nullptr;
+		inline IMatchmaking* GMatchmaking = nullptr;
+		inline ISceneSystem* GSceneSystem = nullptr;
+		inline CTraceManager* GTraceManager = nullptr;
+	} // namespace Interfaces
+
 #define INVALID_EHANDLE_INDEX 0xFFFFFFFF
 #define ENT_ENTRY_MASK 0x7FFF
 #define NUM_SERIAL_NUM_SHIFT_BITS 15
 #define ENT_MAX_NETWORKED_ENTRY 16384
 
+	template <typename T>
 	class CHandle {
 	public:
 		CHandle() : index(INVALID_EHANDLE_INDEX) {}
@@ -469,42 +518,20 @@ namespace CS2 {
 			return index & 0x1FF;
 		}
 
+		T* Get() const noexcept {
+			if (!IsValid())
+				return nullptr;
+			return Interfaces::GGameResourceService->m_pGameEntitySystem->Get<T>(GetEntryIndex());
+		}
+
 	private:
 		uint32_t index;
 	};
-	class C_GameEntitySystem {
-	private:
-		/* 0x000 */ char pad_0x000[0x20F0];
-	public:
-		/* 0x20F0 */ int nMaxEntities;
 
-	public:
-		template <typename T = C_BaseEntity>
-		T* Get(int index) {
-			return reinterpret_cast<T*>(this->GetEntityByIndex(index));
-		}
-
-		template <typename T = C_BaseEntity>
-		T* Get(const CHandle& handle) {
-			return Get<T>(handle.GetEntryIndex());
-		}
-
-	private:
-		void* GetEntityByIndex(int entryIndex) noexcept {
-			static auto addy = Pattern("4C 8D 49 ? 81 FA").scanNow("client.dll").getAddress();
-			using GetEntityByIndexFn_t = void* (__thiscall*)(void*, int);
-			static auto fnGetEntityByIndex = reinterpret_cast<GetEntityByIndexFn_t>(addy);
-			return fnGetEntityByIndex(this, entryIndex);
-		}
+	template <typename T>
+	class C_NetworkUtlVectorBase {
+		// TODO: Implement..
 	};
-
-	class IGameResourceService {
-	private:
-		/* 0x0000 */ char pad_0x0000[0x58];
-	public:
-		/* 0x0058 */ C_GameEntitySystem* m_pGameEntitySystem;
-	};
-	class IMatchmaking;
 
 	class Color {
 		int color32;
@@ -689,12 +716,6 @@ namespace CS2 {
 	};
 
 	namespace Interfaces {
-		inline IEngineClient* GEngineClient = nullptr;
-		inline ISchemaSystem* GSchemaSystem = nullptr;
-		inline IGameResourceService* GGameResourceService = nullptr;
-		inline IMatchmaking* GMatchmaking = nullptr;
-		inline ISceneSystem* GSceneSystem = nullptr;
-		inline CTraceManager* GTraceManager = nullptr;
 		inline bool setupInterfaces() {
 			bool success = true;
 
@@ -997,6 +1018,21 @@ namespace CS2 {
 		}
 		bool operator>=(const Vector3& other) const {
 			return !(*this < other);
+		}
+
+		float length() const {
+			return std::sqrt(x * x + y * y + z * z);
+		}
+
+		float lengthSqr() const {
+			return x * x + y * y + z * z;
+		}
+
+		float DistanceTo(const Vector3& other) const {
+			float dx = x - other.x;
+			float dy = y - other.y;
+			float dz = z - other.z;
+			return std::sqrt(dx * dx + dy * dy + dz * dz);
 		}
 	};
 

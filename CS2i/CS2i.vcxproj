@@ -151,7 +151,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EntityESP.cpp" />
+    <ClCompile Include="WeaponESP.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayerESP.cpp" />
     <ClCompile Include="SchemaExplorer.cpp" />
@@ -165,7 +165,7 @@
     <ClCompile Include="WorldTint.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EntityESP.h" />
+    <ClInclude Include="WeaponESP.h" />
     <ClInclude Include="Feature.h" />
     <ClInclude Include="PlayerESP.h" />
     <ClInclude Include="SchemaExplorer.h" />

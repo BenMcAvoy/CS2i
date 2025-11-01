@@ -476,7 +476,6 @@ class C_CSGO_EndOfMatchLineupEndpoint;
 
 class PulseCursorCancelPriority_t;
 class CPlayerPawnComponent {};
-class CHandle;
 using Vector = Vector3;
 using VectorWS = Vector3;
 class CUtlStringToken;
@@ -600,15 +599,15 @@ class CUtlOrderedMap;
 class C_CommandContext;
 class CSplitScreenSlot;
 class PlayerConnectedState;
+class C_BaseModelEntity;
 #pragma endregion
-
 
 // Class: ActiveModelConfig_t (Size: 0x70)
 class ActiveModelConfig_t {
 public:
 	SCHEMA(ModelConfigHandle_t, m_Handle, "m_Handle", "ActiveModelConfig_t", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_Name, "m_Name", "ActiveModelConfig_t", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_AssociatedEntities, "m_AssociatedEntities", "ActiveModelConfig_t", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseModelEntity > >, m_AssociatedEntities, "m_AssociatedEntities", "ActiveModelConfig_t", "client.dll");
 	SCHEMA(CUtlVector< CUtlSymbolLarge >, m_AssociatedEntityNames, "m_AssociatedEntityNames", "ActiveModelConfig_t", "client.dll");
 };
 
@@ -657,9 +656,9 @@ public:
 		SCHEMA(float32, flOut, "flOut", "CAttributeManager::cached_attribute_float_t", "client.dll");
 	};
 
-	SCHEMA(CUtlVector< CHandle >, m_Providers, "m_Providers", "CAttributeManager", "client.dll");
+	SCHEMA(CUtlVector< CHandle< C_BaseEntity > >, m_Providers, "m_Providers", "CAttributeManager", "client.dll");
 	SCHEMA(int32, m_iReapplyProvisionParity, "m_iReapplyProvisionParity", "CAttributeManager", "client.dll");
-	SCHEMA(CHandle, m_hOuter, "m_hOuter", "CAttributeManager", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOuter, "m_hOuter", "CAttributeManager", "client.dll");
 	SCHEMA(bool, m_bPreventLoopback, "m_bPreventLoopback", "CAttributeManager", "client.dll");
 	SCHEMA(attributeprovidertypes_t, m_ProviderType, "m_ProviderType", "CAttributeManager", "client.dll");
 	SCHEMA(CUtlVector< CAttributeManager::cached_attribute_float_t >, m_CachedResults, "m_CachedResults", "CAttributeManager", "client.dll");
@@ -852,7 +851,7 @@ public:
 // Class: CCSPlayer_ActionTrackingServices (Size: 0x128)
 class CCSPlayer_ActionTrackingServices : public CPlayerPawnComponent {
 public:
-	SCHEMA(CHandle, m_hLastWeaponBeforeC4AutoSwitch, "m_hLastWeaponBeforeC4AutoSwitch", "CCSPlayer_ActionTrackingServices", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerWeapon >, m_hLastWeaponBeforeC4AutoSwitch, "m_hLastWeaponBeforeC4AutoSwitch", "CCSPlayer_ActionTrackingServices", "client.dll");
 	SCHEMA(bool, m_bIsRescuing, "m_bIsRescuing", "CCSPlayer_ActionTrackingServices", "client.dll");
 	SCHEMA(WeaponPurchaseTracker_t, m_weaponPurchasesThisMatch, "m_weaponPurchasesThisMatch", "CCSPlayer_ActionTrackingServices", "client.dll");
 	SCHEMA(WeaponPurchaseTracker_t, m_weaponPurchasesThisRound, "m_weaponPurchasesThisRound", "CCSPlayer_ActionTrackingServices", "client.dll");
@@ -872,8 +871,8 @@ public:
 // Class: CCSPlayer_HostageServices (Size: 0x48)
 class CCSPlayer_HostageServices : public CPlayerPawnComponent {
 public:
-	SCHEMA(CHandle, m_hCarriedHostage, "m_hCarriedHostage", "CCSPlayer_HostageServices", "client.dll");
-	SCHEMA(CHandle, m_hCarriedHostageProp, "m_hCarriedHostageProp", "CCSPlayer_HostageServices", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hCarriedHostage, "m_hCarriedHostage", "CCSPlayer_HostageServices", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hCarriedHostageProp, "m_hCarriedHostageProp", "CCSPlayer_HostageServices", "client.dll");
 };
 
 // Class: CCSPlayer_ItemServices (Size: 0x48)
@@ -886,7 +885,7 @@ public:
 // Class: CCSPlayer_PingServices (Size: 0x48)
 class CCSPlayer_PingServices : public CPlayerPawnComponent {
 public:
-	SCHEMA(CHandle, m_hPlayerPing, "m_hPlayerPing", "CCSPlayer_PingServices", "client.dll");
+	SCHEMA(CHandle< C_PlayerPing >, m_hPlayerPing, "m_hPlayerPing", "CCSPlayer_PingServices", "client.dll");
 };
 
 // Class: CCSPlayer_WaterServices (Size: 0x68)
@@ -1007,10 +1006,10 @@ public:
 // Class: CDamageRecord (Size: 0x78)
 class CDamageRecord {
 public:
-	SCHEMA(CHandle, m_PlayerDamager, "m_PlayerDamager", "CDamageRecord", "client.dll");
-	SCHEMA(CHandle, m_PlayerRecipient, "m_PlayerRecipient", "CDamageRecord", "client.dll");
-	SCHEMA(CHandle, m_hPlayerControllerDamager, "m_hPlayerControllerDamager", "CDamageRecord", "client.dll");
-	SCHEMA(CHandle, m_hPlayerControllerRecipient, "m_hPlayerControllerRecipient", "CDamageRecord", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_PlayerDamager, "m_PlayerDamager", "CDamageRecord", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_PlayerRecipient, "m_PlayerRecipient", "CDamageRecord", "client.dll");
+	SCHEMA(CHandle< CCSPlayerController >, m_hPlayerControllerDamager, "m_hPlayerControllerDamager", "CDamageRecord", "client.dll");
+	SCHEMA(CHandle< CCSPlayerController >, m_hPlayerControllerRecipient, "m_hPlayerControllerRecipient", "CDamageRecord", "client.dll");
 	SCHEMA(CUtlString, m_szPlayerDamagerName, "m_szPlayerDamagerName", "CDamageRecord", "client.dll");
 	SCHEMA(CUtlString, m_szPlayerRecipientName, "m_szPlayerRecipientName", "CDamageRecord", "client.dll");
 	SCHEMA(uint64, m_DamagerXuid, "m_DamagerXuid", "CDamageRecord", "client.dll");
@@ -1029,7 +1028,7 @@ class CDestructiblePartsComponent {
 public:
 	SCHEMA(CNetworkVarChainer, __m_pChainEntity, "__m_pChainEntity", "CDestructiblePartsComponent", "client.dll");
 	SCHEMA(CUtlVector< uint16 >, m_vecDamageTakenByHitGroup, "m_vecDamageTakenByHitGroup", "CDestructiblePartsComponent", "client.dll");
-	SCHEMA(CHandle, m_hOwner, "m_hOwner", "CDestructiblePartsComponent", "client.dll");
+	SCHEMA(CHandle< C_BaseModelEntity >, m_hOwner, "m_hOwner", "CDestructiblePartsComponent", "client.dll");
 	SCHEMA(int32, m_nLastHitDamageLevel, "m_nLastHitDamageLevel", "CDestructiblePartsComponent", "client.dll");
 };
 
@@ -1105,7 +1104,7 @@ class CFilterMultiple : public CBaseFilter {
 public:
 	SCHEMA(filter_t, m_nFilterType, "m_nFilterType", "CFilterMultiple", "client.dll");
 	SCHEMA(CUtlSymbolLarge*, m_iFilterName, "m_iFilterName", "CFilterMultiple", "client.dll");
-	SCHEMA(CHandle, m_hFilter, "m_hFilter", "CFilterMultiple", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >*, m_hFilter, "m_hFilter", "CFilterMultiple", "client.dll");
 };
 
 // Class: CFilterName (Size: 0x658)
@@ -1203,7 +1202,7 @@ public:
 	SCHEMA(float32, m_flRange, "m_flRange", "CInfoDynamicShadowHint", "client.dll");
 	SCHEMA(int32, m_nImportance, "m_nImportance", "CInfoDynamicShadowHint", "client.dll");
 	SCHEMA(int32, m_nLightChoice, "m_nLightChoice", "CInfoDynamicShadowHint", "client.dll");
-	SCHEMA(CHandle, m_hLight, "m_hLight", "CInfoDynamicShadowHint", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hLight, "m_hLight", "CInfoDynamicShadowHint", "client.dll");
 };
 
 // Class: CInfoDynamicShadowHintBox (Size: 0x628)
@@ -1230,7 +1229,7 @@ public:
 	SCHEMA(int32, m_nResolutionY, "m_nResolutionY", "CInfoOffscreenPanoramaTexture", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_szLayoutFileName, "m_szLayoutFileName", "CInfoOffscreenPanoramaTexture", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_RenderAttrName, "m_RenderAttrName", "CInfoOffscreenPanoramaTexture", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_TargetEntities, "m_TargetEntities", "CInfoOffscreenPanoramaTexture", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseModelEntity > >, m_TargetEntities, "m_TargetEntities", "CInfoOffscreenPanoramaTexture", "client.dll");
 	SCHEMA(int32, m_nTargetChangeCount, "m_nTargetChangeCount", "CInfoOffscreenPanoramaTexture", "client.dll");
 	SCHEMA(CUtlVector< CUtlSymbolLarge >, m_vecCSSClasses, "m_vecCSSClasses", "CInfoOffscreenPanoramaTexture", "client.dll");
 	SCHEMA(bool, m_bCheckCSSClasses, "m_bCheckCSSClasses", "CInfoOffscreenPanoramaTexture", "client.dll");
@@ -1370,21 +1369,21 @@ public:
 	SCHEMA(GameTick_t, m_nCsViewPunchAngleTick, "m_nCsViewPunchAngleTick", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(float32, m_flCsViewPunchAngleTickRatio, "m_flCsViewPunchAngleTickRatio", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(C_fogplayerparams_t, m_PlayerFog, "m_PlayerFog", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hColorCorrectionCtrl, "m_hColorCorrectionCtrl", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hViewEntity, "m_hViewEntity", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hTonemapController, "m_hTonemapController", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_ColorCorrection >, m_hColorCorrectionCtrl, "m_hColorCorrectionCtrl", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hViewEntity, "m_hViewEntity", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_TonemapController2 >, m_hTonemapController, "m_hTonemapController", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(audioparams_t, m_audio, "m_audio", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_PostProcessingVolumes, "m_PostProcessingVolumes", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_PostProcessingVolume > >, m_PostProcessingVolumes, "m_PostProcessingVolumes", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(float32, m_flOldPlayerZ, "m_flOldPlayerZ", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(float32, m_flOldPlayerViewOffsetZ, "m_flOldPlayerViewOffsetZ", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(fogparams_t, m_CurrentFog, "m_CurrentFog", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hOldFogController, "m_hOldFogController", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_FogController >, m_hOldFogController, "m_hOldFogController", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(bool*, m_bOverrideFogColor, "m_bOverrideFogColor", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(Color*, m_OverrideFogColor, "m_OverrideFogColor", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(bool*, m_bOverrideFogStartEnd, "m_bOverrideFogStartEnd", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(float32*, m_fOverrideFogStart, "m_fOverrideFogStart", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(float32*, m_fOverrideFogEnd, "m_fOverrideFogEnd", "CPlayer_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hActivePostProcessingVolume, "m_hActivePostProcessingVolume", "CPlayer_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_PostProcessingVolume >, m_hActivePostProcessingVolume, "m_hActivePostProcessingVolume", "CPlayer_CameraServices", "client.dll");
 	SCHEMA(QAngle, m_angDemoViewAngles, "m_angDemoViewAngles", "CPlayer_CameraServices", "client.dll");
 };
 
@@ -1395,7 +1394,7 @@ public:
 	SCHEMA(uint32, m_iFOVStart, "m_iFOVStart", "CCSPlayerBase_CameraServices", "client.dll");
 	SCHEMA(GameTime_t, m_flFOVTime, "m_flFOVTime", "CCSPlayerBase_CameraServices", "client.dll");
 	SCHEMA(float32, m_flFOVRate, "m_flFOVRate", "CCSPlayerBase_CameraServices", "client.dll");
-	SCHEMA(CHandle, m_hZoomOwner, "m_hZoomOwner", "CCSPlayerBase_CameraServices", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hZoomOwner, "m_hZoomOwner", "CCSPlayerBase_CameraServices", "client.dll");
 	SCHEMA(float32, m_flLastShotFOV, "m_flLastShotFOV", "CCSPlayerBase_CameraServices", "client.dll");
 };
 
@@ -1491,7 +1490,7 @@ public:
 class CPlayer_ObserverServices : public CPlayerPawnComponent {
 public:
 	SCHEMA(uint8, m_iObserverMode, "m_iObserverMode", "CPlayer_ObserverServices", "client.dll");
-	SCHEMA(CHandle, m_hObserverTarget, "m_hObserverTarget", "CPlayer_ObserverServices", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hObserverTarget, "m_hObserverTarget", "CPlayer_ObserverServices", "client.dll");
 	SCHEMA(ObserverMode_t, m_iObserverLastMode, "m_iObserverLastMode", "CPlayer_ObserverServices", "client.dll");
 	SCHEMA(bool, m_bForcedObserverMode, "m_bForcedObserverMode", "CPlayer_ObserverServices", "client.dll");
 	SCHEMA(float32, m_flObserverChaseDistance, "m_flObserverChaseDistance", "CPlayer_ObserverServices", "client.dll");
@@ -1507,9 +1506,9 @@ public:
 // Class: CPlayer_WeaponServices (Size: 0xA0)
 class CPlayer_WeaponServices : public CPlayerPawnComponent {
 public:
-	SCHEMA(CUtlVector< CHandle >, m_hMyWeapons, "m_hMyWeapons", "CPlayer_WeaponServices", "client.dll");
-	SCHEMA(CHandle, m_hActiveWeapon, "m_hActiveWeapon", "CPlayer_WeaponServices", "client.dll");
-	SCHEMA(CHandle, m_hLastWeapon, "m_hLastWeapon", "CPlayer_WeaponServices", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BasePlayerWeapon > >, m_hMyWeapons, "m_hMyWeapons", "CPlayer_WeaponServices", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerWeapon >, m_hActiveWeapon, "m_hActiveWeapon", "CPlayer_WeaponServices", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerWeapon >, m_hLastWeapon, "m_hLastWeapon", "CPlayer_WeaponServices", "client.dll");
 	SCHEMA(uint16*, m_iAmmo, "m_iAmmo", "CPlayer_WeaponServices", "client.dll");
 };
 
@@ -1934,7 +1933,7 @@ public:
 // Class: C_BaseButton (Size: 0xEC0)
 class C_BaseButton : public C_BaseToggle {
 public:
-	SCHEMA(CHandle, m_glowEntity, "m_glowEntity", "C_BaseButton", "client.dll");
+	SCHEMA(CHandle< C_BaseModelEntity >, m_glowEntity, "m_glowEntity", "C_BaseButton", "client.dll");
 	SCHEMA(bool, m_usable, "m_usable", "C_BaseButton", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_szDisplayText, "m_szDisplayText", "C_BaseButton", "client.dll");
 };
@@ -1962,7 +1961,7 @@ public:
 	SCHEMA(TakeDamageFlags_t, m_nTakeDamageFlags, "m_nTakeDamageFlags", "C_BaseEntity", "client.dll");
 	SCHEMA(EntityPlatformTypes_t, m_nPlatformType, "m_nPlatformType", "C_BaseEntity", "client.dll");
 	SCHEMA(uint8, m_ubInterpolationFrame, "m_ubInterpolationFrame", "C_BaseEntity", "client.dll");
-	SCHEMA(CHandle, m_hSceneObjectController, "m_hSceneObjectController", "C_BaseEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hSceneObjectController, "m_hSceneObjectController", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_nNoInterpolationTick, "m_nNoInterpolationTick", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_nVisibilityNoInterpolationTick, "m_nVisibilityNoInterpolationTick", "C_BaseEntity", "client.dll");
 	SCHEMA(float32, m_flProxyRandomValue, "m_flProxyRandomValue", "C_BaseEntity", "client.dll");
@@ -1996,14 +1995,14 @@ public:
 	SCHEMA(CNetworkVelocityVector, m_vecServerVelocity, "m_vecServerVelocity", "C_BaseEntity", "client.dll");
 	SCHEMA(CNetworkVelocityVector, m_vecVelocity, "m_vecVelocity", "C_BaseEntity", "client.dll");
 	SCHEMA(Vector, m_vecBaseVelocity, "m_vecBaseVelocity", "C_BaseEntity", "client.dll");
-	SCHEMA(CHandle, m_hEffectEntity, "m_hEffectEntity", "C_BaseEntity", "client.dll");
-	SCHEMA(CHandle, m_hOwnerEntity, "m_hOwnerEntity", "C_BaseEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hEffectEntity, "m_hEffectEntity", "C_BaseEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOwnerEntity, "m_hOwnerEntity", "C_BaseEntity", "client.dll");
 	SCHEMA(MoveCollide_t, m_MoveCollide, "m_MoveCollide", "C_BaseEntity", "client.dll");
 	SCHEMA(MoveType_t, m_MoveType, "m_MoveType", "C_BaseEntity", "client.dll");
 	SCHEMA(MoveType_t, m_nActualMoveType, "m_nActualMoveType", "C_BaseEntity", "client.dll");
 	SCHEMA(float32, m_flWaterLevel, "m_flWaterLevel", "C_BaseEntity", "client.dll");
 	SCHEMA(uint32, m_fEffects, "m_fEffects", "C_BaseEntity", "client.dll");
-	SCHEMA(CHandle, m_hGroundEntity, "m_hGroundEntity", "C_BaseEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hGroundEntity, "m_hGroundEntity", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_nGroundBodyIndex, "m_nGroundBodyIndex", "C_BaseEntity", "client.dll");
 	SCHEMA(float32, m_flFriction, "m_flFriction", "C_BaseEntity", "client.dll");
 	SCHEMA(float32, m_flElasticity, "m_flElasticity", "C_BaseEntity", "client.dll");
@@ -2020,7 +2019,7 @@ public:
 	SCHEMA(bool, m_bRenderWithViewModels, "m_bRenderWithViewModels", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_nFirstPredictableCommand, "m_nFirstPredictableCommand", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_nLastPredictableCommand, "m_nLastPredictableCommand", "C_BaseEntity", "client.dll");
-	SCHEMA(CHandle, m_hOldMoveParent, "m_hOldMoveParent", "C_BaseEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOldMoveParent, "m_hOldMoveParent", "C_BaseEntity", "client.dll");
 	SCHEMA(CParticleProperty, m_Particles, "m_Particles", "C_BaseEntity", "client.dll");
 	SCHEMA(QAngle, m_vecAngVelocity, "m_vecAngVelocity", "C_BaseEntity", "client.dll");
 	SCHEMA(int32, m_DataChangeEventRef, "m_DataChangeEventRef", "C_BaseEntity", "client.dll");
@@ -2038,12 +2037,12 @@ public:
 	SCHEMA(C_CommandContext, m_CommandContext, "m_CommandContext", "CBasePlayerController", "client.dll");
 	SCHEMA(uint64, m_nInButtonsWhichAreToggles, "m_nInButtonsWhichAreToggles", "CBasePlayerController", "client.dll");
 	SCHEMA(uint32, m_nTickBase, "m_nTickBase", "CBasePlayerController", "client.dll");
-	SCHEMA(CHandle, m_hPawn, "m_hPawn", "CBasePlayerController", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerPawn >, m_hPawn, "m_hPawn", "CBasePlayerController", "client.dll");
 	SCHEMA(bool, m_bKnownTeamMismatch, "m_bKnownTeamMismatch", "CBasePlayerController", "client.dll");
-	SCHEMA(CHandle, m_hPredictedPawn, "m_hPredictedPawn", "CBasePlayerController", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerPawn >, m_hPredictedPawn, "m_hPredictedPawn", "CBasePlayerController", "client.dll");
 	SCHEMA(CSplitScreenSlot, m_nSplitScreenSlot, "m_nSplitScreenSlot", "CBasePlayerController", "client.dll");
-	SCHEMA(CHandle, m_hSplitOwner, "m_hSplitOwner", "CBasePlayerController", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_hSplitScreenPlayers, "m_hSplitScreenPlayers", "CBasePlayerController", "client.dll");
+	SCHEMA(CHandle< CBasePlayerController >, m_hSplitOwner, "m_hSplitOwner", "CBasePlayerController", "client.dll");
+	SCHEMA(CUtlVector< CHandle< CBasePlayerController > >, m_hSplitScreenPlayers, "m_hSplitScreenPlayers", "CBasePlayerController", "client.dll");
 	SCHEMA(bool, m_bIsHLTV, "m_bIsHLTV", "CBasePlayerController", "client.dll");
 	SCHEMA(PlayerConnectedState, m_iConnected, "m_iConnected", "CBasePlayerController", "client.dll");
 	SCHEMA(char*, m_iszPlayerName, "m_iszPlayerName", "CBasePlayerController", "client.dll");
@@ -2100,8 +2099,8 @@ public:
 	SCHEMA(bool, m_bHasBeenControlledByPlayerThisRound, "m_bHasBeenControlledByPlayerThisRound", "CCSPlayerController", "client.dll");
 	SCHEMA(int32, m_nBotsControlledThisRound, "m_nBotsControlledThisRound", "CCSPlayerController", "client.dll");
 	SCHEMA(bool, m_bCanControlObservedBot, "m_bCanControlObservedBot", "CCSPlayerController", "client.dll");
-	SCHEMA(CHandle, m_hPlayerPawn, "m_hPlayerPawn", "CCSPlayerController", "client.dll");
-	SCHEMA(CHandle, m_hObserverPawn, "m_hObserverPawn", "CCSPlayerController", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hPlayerPawn, "m_hPlayerPawn", "CCSPlayerController", "client.dll");
+	SCHEMA(CHandle< C_CSObserverPawn >, m_hObserverPawn, "m_hObserverPawn", "CCSPlayerController", "client.dll");
 	SCHEMA(bool, m_bPawnIsAlive, "m_bPawnIsAlive", "CCSPlayerController", "client.dll");
 	SCHEMA(uint32, m_iPawnHealth, "m_iPawnHealth", "CCSPlayerController", "client.dll");
 	SCHEMA(int32, m_iPawnArmor, "m_iPawnArmor", "CCSPlayerController", "client.dll");
@@ -2111,7 +2110,7 @@ public:
 	SCHEMA(int32, m_iPawnLifetimeStart, "m_iPawnLifetimeStart", "CCSPlayerController", "client.dll");
 	SCHEMA(int32, m_iPawnLifetimeEnd, "m_iPawnLifetimeEnd", "CCSPlayerController", "client.dll");
 	SCHEMA(int32, m_iPawnBotDifficulty, "m_iPawnBotDifficulty", "CCSPlayerController", "client.dll");
-	SCHEMA(CHandle, m_hOriginalControllerOfCurrentPawn, "m_hOriginalControllerOfCurrentPawn", "CCSPlayerController", "client.dll");
+	SCHEMA(CHandle< CCSPlayerController >, m_hOriginalControllerOfCurrentPawn, "m_hOriginalControllerOfCurrentPawn", "CCSPlayerController", "client.dll");
 	SCHEMA(int32, m_iScore, "m_iScore", "CCSPlayerController", "client.dll");
 	SCHEMA(uint8*, m_recentKillQueue, "m_recentKillQueue", "CCSPlayerController", "client.dll");
 	SCHEMA(uint8, m_nFirstKill, "m_nFirstKill", "CCSPlayerController", "client.dll");
@@ -2148,7 +2147,7 @@ public:
 	SCHEMA(int32, m_soundscapeIndex, "m_soundscapeIndex", "CEnvSoundscape", "client.dll");
 	SCHEMA(int32, m_soundscapeEntityListId, "m_soundscapeEntityListId", "CEnvSoundscape", "client.dll");
 	SCHEMA(CUtlSymbolLarge*, m_positionNames, "m_positionNames", "CEnvSoundscape", "client.dll");
-	SCHEMA(CHandle, m_hProxySoundscape, "m_hProxySoundscape", "CEnvSoundscape", "client.dll");
+	SCHEMA(CHandle< CEnvSoundscape >, m_hProxySoundscape, "m_hProxySoundscape", "CEnvSoundscape", "client.dll");
 	SCHEMA(bool, m_bDisabled, "m_bDisabled", "CEnvSoundscape", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_soundscapeName, "m_soundscapeName", "CEnvSoundscape", "client.dll");
 	SCHEMA(uint32, m_soundEventHash, "m_soundEventHash", "CEnvSoundscape", "client.dll");
@@ -2185,7 +2184,7 @@ public:
 class CPointOrient : public C_BaseEntity {
 public:
 	SCHEMA(CUtlSymbolLarge, m_iszSpawnTargetName, "m_iszSpawnTargetName", "CPointOrient", "client.dll");
-	SCHEMA(CHandle, m_hTarget, "m_hTarget", "CPointOrient", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hTarget, "m_hTarget", "CPointOrient", "client.dll");
 	SCHEMA(bool, m_bActive, "m_bActive", "CPointOrient", "client.dll");
 	SCHEMA(PointOrientGoalDirectionType_t, m_nGoalDirection, "m_nGoalDirection", "CPointOrient", "client.dll");
 	SCHEMA(PointOrientConstraint_t, m_nConstraint, "m_nConstraint", "CPointOrient", "client.dll");
@@ -2210,7 +2209,7 @@ public:
 class CSkyboxReference : public C_BaseEntity {
 public:
 	SCHEMA(WorldGroupId_t, m_worldGroupId, "m_worldGroupId", "CSkyboxReference", "client.dll");
-	SCHEMA(CHandle, m_hSkyCamera, "m_hSkyCamera", "CSkyboxReference", "client.dll");
+	SCHEMA(CHandle< C_SkyCamera >, m_hSkyCamera, "m_hSkyCamera", "CSkyboxReference", "client.dll");
 };
 
 // Class: C_BaseModelEntity (Size: 0xEB0)
@@ -2247,7 +2246,7 @@ public:
 	SCHEMA(Vector, m_vDecalForwardAxis, "m_vDecalForwardAxis", "C_BaseModelEntity", "client.dll");
 	SCHEMA(DecalMode_t, m_nDecalMode, "m_nDecalMode", "C_BaseModelEntity", "client.dll");
 	SCHEMA(DecalMode_t, m_nRequiredDecalMode, "m_nRequiredDecalMode", "C_BaseModelEntity", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_ConfigEntitiesToPropagateMaterialDecalsTo, "m_ConfigEntitiesToPropagateMaterialDecalsTo", "C_BaseModelEntity", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseModelEntity > >, m_ConfigEntitiesToPropagateMaterialDecalsTo, "m_ConfigEntitiesToPropagateMaterialDecalsTo", "C_BaseModelEntity", "client.dll");
 	SCHEMA(CNetworkViewOffsetVector, m_vecViewOffset, "m_vecViewOffset", "C_BaseModelEntity", "client.dll");
 	SCHEMA(CClientAlphaProperty*, m_pClientAlphaProperty, "m_pClientAlphaProperty", "C_BaseModelEntity", "client.dll");
 	SCHEMA(Color, m_ClientOverrideTint, "m_ClientOverrideTint", "C_BaseModelEntity", "client.dll");
@@ -2407,7 +2406,7 @@ public:
 // Class: C_BaseCombatCharacter (Size: 0x13F0)
 class C_BaseCombatCharacter : public C_BaseFlex {
 public:
-	SCHEMA(CUtlVector< CHandle >, m_hMyWearables, "m_hMyWearables", "C_BaseCombatCharacter", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_EconWearable > >, m_hMyWearables, "m_hMyWearables", "C_BaseCombatCharacter", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_leftFootAttachment, "m_leftFootAttachment", "C_BaseCombatCharacter", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_rightFootAttachment, "m_rightFootAttachment", "C_BaseCombatCharacter", "client.dll");
 	SCHEMA(float32, m_flWaterWorldZ, "m_flWaterWorldZ", "C_BaseCombatCharacter", "client.dll");
@@ -2426,9 +2425,9 @@ public:
 	SCHEMA(float32, m_flDamage, "m_flDamage", "C_BaseGrenade", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_iszBounceSound, "m_iszBounceSound", "C_BaseGrenade", "client.dll");
 	SCHEMA(CUtlString, m_ExplosionSound, "m_ExplosionSound", "C_BaseGrenade", "client.dll");
-	SCHEMA(CHandle, m_hThrower, "m_hThrower", "C_BaseGrenade", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hThrower, "m_hThrower", "C_BaseGrenade", "client.dll");
 	SCHEMA(GameTime_t, m_flNextAttack, "m_flNextAttack", "C_BaseGrenade", "client.dll");
-	SCHEMA(CHandle, m_hOriginalThrower, "m_hOriginalThrower", "C_BaseGrenade", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hOriginalThrower, "m_hOriginalThrower", "C_BaseGrenade", "client.dll");
 };
 
 // Class: C_BaseCSGrenadeProjectile (Size: 0x1450)
@@ -2478,8 +2477,8 @@ public:
 	SCHEMA(float32, m_flOldSimulationTime, "m_flOldSimulationTime", "C_BasePlayerPawn", "client.dll");
 	SCHEMA(int32, m_nLastExecutedCommandNumber, "m_nLastExecutedCommandNumber", "C_BasePlayerPawn", "client.dll");
 	SCHEMA(int32, m_nLastExecutedCommandTick, "m_nLastExecutedCommandTick", "C_BasePlayerPawn", "client.dll");
-	SCHEMA(CHandle, m_hController, "m_hController", "C_BasePlayerPawn", "client.dll");
-	SCHEMA(CHandle, m_hDefaultController, "m_hDefaultController", "C_BasePlayerPawn", "client.dll");
+	SCHEMA(CHandle< CBasePlayerController >, m_hController, "m_hController", "C_BasePlayerPawn", "client.dll");
+	SCHEMA(CHandle< CBasePlayerController >, m_hDefaultController, "m_hDefaultController", "C_BasePlayerPawn", "client.dll");
 	SCHEMA(bool, m_bIsSwappingToPredictableController, "m_bIsSwappingToPredictableController", "C_BasePlayerPawn", "client.dll");
 };
 
@@ -2493,9 +2492,9 @@ public:
 	SCHEMA(CEntityIOOutput, m_OnTouching, "m_OnTouching", "C_BaseTrigger", "client.dll");
 	SCHEMA(CEntityIOOutput, m_OnTouchingEachEntity, "m_OnTouchingEachEntity", "C_BaseTrigger", "client.dll");
 	SCHEMA(CEntityIOOutput, m_OnNotTouching, "m_OnNotTouching", "C_BaseTrigger", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_hTouchingEntities, "m_hTouchingEntities", "C_BaseTrigger", "client.dll");
+	SCHEMA(CUtlVector< CHandle< C_BaseEntity > >, m_hTouchingEntities, "m_hTouchingEntities", "C_BaseTrigger", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_iFilterName, "m_iFilterName", "C_BaseTrigger", "client.dll");
-	SCHEMA(CHandle, m_hFilter, "m_hFilter", "C_BaseTrigger", "client.dll");
+	SCHEMA(CHandle< CBaseFilter >, m_hFilter, "m_hFilter", "C_BaseTrigger", "client.dll");
 	SCHEMA(bool, m_bDisabled, "m_bDisabled", "C_BaseTrigger", "client.dll");
 };
 
@@ -2513,7 +2512,7 @@ public:
 	SCHEMA(bool, m_bPushTowardsInfoTarget, "m_bPushTowardsInfoTarget", "CTriggerFan", "client.dll");
 	SCHEMA(bool, m_bPushAwayFromInfoTarget, "m_bPushAwayFromInfoTarget", "CTriggerFan", "client.dll");
 	SCHEMA(Quaternion, m_qNoiseDelta, "m_qNoiseDelta", "CTriggerFan", "client.dll");
-	SCHEMA(CHandle, m_hInfoFan, "m_hInfoFan", "CTriggerFan", "client.dll");
+	SCHEMA(CHandle< CInfoFan >, m_hInfoFan, "m_hInfoFan", "CTriggerFan", "client.dll");
 	SCHEMA(float32, m_flForce, "m_flForce", "CTriggerFan", "client.dll");
 	SCHEMA(bool, m_bFalloff, "m_bFalloff", "CTriggerFan", "client.dll");
 	SCHEMA(CountdownTimer, m_RampTimer, "m_RampTimer", "CTriggerFan", "client.dll");
@@ -2530,7 +2529,7 @@ public:
 	SCHEMA(int32, m_queryHandleHalo, "m_queryHandleHalo", "C_Beam", "client.dll");
 	SCHEMA(BeamType_t, m_nBeamType, "m_nBeamType", "C_Beam", "client.dll");
 	SCHEMA(uint32, m_nBeamFlags, "m_nBeamFlags", "C_Beam", "client.dll");
-	SCHEMA(CHandle*, m_hAttachEntity, "m_hAttachEntity", "C_Beam", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >*, m_hAttachEntity, "m_hAttachEntity", "C_Beam", "client.dll");
 	SCHEMA(AttachmentHandle_t*, m_nAttachIndex, "m_nAttachIndex", "C_Beam", "client.dll");
 	SCHEMA(float32, m_fWidth, "m_fWidth", "C_Beam", "client.dll");
 	SCHEMA(float32, m_fEndWidth, "m_fEndWidth", "C_Beam", "client.dll");
@@ -2543,7 +2542,7 @@ public:
 	SCHEMA(BeamClipStyle_t, m_nClipStyle, "m_nClipStyle", "C_Beam", "client.dll");
 	SCHEMA(bool, m_bTurnedOff, "m_bTurnedOff", "C_Beam", "client.dll");
 	SCHEMA(VectorWS, m_vecEndPos, "m_vecEndPos", "C_Beam", "client.dll");
-	SCHEMA(CHandle, m_hEndEntity, "m_hEndEntity", "C_Beam", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hEndEntity, "m_hEndEntity", "C_Beam", "client.dll");
 };
 
 // Class: C_BreakableProp (Size: 0x1300)
@@ -2558,7 +2557,7 @@ public:
 	SCHEMA(float32, m_flPressureDelay, "m_flPressureDelay", "C_BreakableProp", "client.dll");
 	SCHEMA(float32, m_flDefBurstScale, "m_flDefBurstScale", "C_BreakableProp", "client.dll");
 	SCHEMA(Vector, m_vDefBurstOffset, "m_vDefBurstOffset", "C_BreakableProp", "client.dll");
-	SCHEMA(CHandle, m_hBreaker, "m_hBreaker", "C_BreakableProp", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hBreaker, "m_hBreaker", "C_BreakableProp", "client.dll");
 	SCHEMA(PerformanceMode_t, m_PerformanceMode, "m_PerformanceMode", "C_BreakableProp", "client.dll");
 	SCHEMA(GameTime_t, m_flPreventDamageBeforeTime, "m_flPreventDamageBeforeTime", "C_BreakableProp", "client.dll");
 	SCHEMA(BreakableContentsType_t, m_BreakableContentsType, "m_BreakableContentsType", "C_BreakableProp", "client.dll");
@@ -2572,10 +2571,10 @@ public:
 	SCHEMA(CUtlSymbolLarge, m_explosionCustomEffect, "m_explosionCustomEffect", "C_BreakableProp", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_explosionCustomSound, "m_explosionCustomSound", "C_BreakableProp", "client.dll");
 	SCHEMA(CUtlSymbolLarge, m_explosionModifier, "m_explosionModifier", "C_BreakableProp", "client.dll");
-	SCHEMA(CHandle, m_hPhysicsAttacker, "m_hPhysicsAttacker", "C_BreakableProp", "client.dll");
+	SCHEMA(CHandle< C_BasePlayerPawn >, m_hPhysicsAttacker, "m_hPhysicsAttacker", "C_BreakableProp", "client.dll");
 	SCHEMA(GameTime_t, m_flLastPhysicsInfluenceTime, "m_flLastPhysicsInfluenceTime", "C_BreakableProp", "client.dll");
 	SCHEMA(float32, m_flDefaultFadeScale, "m_flDefaultFadeScale", "C_BreakableProp", "client.dll");
-	SCHEMA(CHandle, m_hLastAttacker, "m_hLastAttacker", "C_BreakableProp", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hLastAttacker, "m_hLastAttacker", "C_BreakableProp", "client.dll");
 };
 
 // Class: C_BulletHitModel (Size: 0x11A8)
@@ -2583,7 +2582,7 @@ class C_BulletHitModel {
 public:
 	SCHEMA(matrix3x4_t, m_matLocal, "m_matLocal", "C_BulletHitModel", "client.dll");
 	SCHEMA(int32, m_iBoneIndex, "m_iBoneIndex", "C_BulletHitModel", "client.dll");
-	SCHEMA(CHandle, m_hPlayerParent, "m_hPlayerParent", "C_BulletHitModel", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hPlayerParent, "m_hPlayerParent", "C_BulletHitModel", "client.dll");
 	SCHEMA(bool, m_bIsHit, "m_bIsHit", "C_BulletHitModel", "client.dll");
 	SCHEMA(float32, m_flTimeCreated, "m_flTimeCreated", "C_BulletHitModel", "client.dll");
 	SCHEMA(Vector, m_vecStartPos, "m_vecStartPos", "C_BulletHitModel", "client.dll");
@@ -2788,7 +2787,7 @@ public:
 	SCHEMA(float32, m_flLastSmokeOverlayAlpha, "m_flLastSmokeOverlayAlpha", "C_CSPlayerPawnBase", "client.dll");
 	SCHEMA(float32, m_flLastSmokeAge, "m_flLastSmokeAge", "C_CSPlayerPawnBase", "client.dll");
 	SCHEMA(Vector, m_vLastSmokeOverlayColor, "m_vLastSmokeOverlayColor", "C_CSPlayerPawnBase", "client.dll");
-	SCHEMA(CHandle, m_hOriginalController, "m_hOriginalController", "C_CSPlayerPawnBase", "client.dll");
+	SCHEMA(CHandle< CCSPlayerController >, m_hOriginalController, "m_hOriginalController", "C_CSPlayerPawnBase", "client.dll");
 };
 
 // Class: C_CSObserverPawn (Size: 0x1670)
@@ -2850,7 +2849,7 @@ public:
 	SCHEMA(Vector, m_vRagdollServerOrigin, "m_vRagdollServerOrigin", "C_CSPlayerPawn", "client.dll");
 	SCHEMA(GameTime_t, m_lastLandTime, "m_lastLandTime", "C_CSPlayerPawn", "client.dll");
 	SCHEMA(bool, m_bOnGroundLastTick, "m_bOnGroundLastTick", "C_CSPlayerPawn", "client.dll");
-	SCHEMA(CHandle, m_hHudModelArms, "m_hHudModelArms", "C_CSPlayerPawn", "client.dll");
+	SCHEMA(CHandle< C_CS2HudModelArms >, m_hHudModelArms, "m_hHudModelArms", "C_CSPlayerPawn", "client.dll");
 	SCHEMA(QAngle, m_qDeathEyeAngles, "m_qDeathEyeAngles", "C_CSPlayerPawn", "client.dll");
 	SCHEMA(bool, m_bSkipOneHeadConstraintUpdate, "m_bSkipOneHeadConstraintUpdate", "C_CSPlayerPawn", "client.dll");
 	SCHEMA(bool, m_bLeftHanded, "m_bLeftHanded", "C_CSPlayerPawn", "client.dll");
@@ -3070,16 +3069,16 @@ public:
 	SCHEMA(bool, m_bNoNPCs, "m_bNoNPCs", "C_BasePropDoor", "client.dll");
 	SCHEMA(Vector, m_closedPosition, "m_closedPosition", "C_BasePropDoor", "client.dll");
 	SCHEMA(QAngle, m_closedAngles, "m_closedAngles", "C_BasePropDoor", "client.dll");
-	SCHEMA(CHandle, m_hMaster, "m_hMaster", "C_BasePropDoor", "client.dll");
+	SCHEMA(CHandle< C_BasePropDoor >, m_hMaster, "m_hMaster", "C_BasePropDoor", "client.dll");
 	SCHEMA(Vector, m_vWhereToSetLightingOrigin, "m_vWhereToSetLightingOrigin", "C_BasePropDoor", "client.dll");
 };
 
 // Class: C_Chicken (Size: 0x1930)
 class C_Chicken : public C_DynamicProp {
 public:
-	SCHEMA(CHandle, m_hHolidayHatAddon, "m_hHolidayHatAddon", "C_Chicken", "client.dll");
+	SCHEMA(CHandle< CBaseAnimGraph >, m_hHolidayHatAddon, "m_hHolidayHatAddon", "C_Chicken", "client.dll");
 	SCHEMA(bool, m_jumpedThisFrame, "m_jumpedThisFrame", "C_Chicken", "client.dll");
-	SCHEMA(CHandle, m_leader, "m_leader", "C_Chicken", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_leader, "m_leader", "C_Chicken", "client.dll");
 	SCHEMA(C_AttributeContainer, m_AttributeManager, "m_AttributeManager", "C_Chicken", "client.dll");
 	SCHEMA(bool, m_bAttributesInitialized, "m_bAttributesInitialized", "C_Chicken", "client.dll");
 	SCHEMA(ParticleIndex_t, m_hWaterWakeParticles, "m_hWaterWakeParticles", "C_Chicken", "client.dll");
@@ -3102,12 +3101,12 @@ public:
 	SCHEMA(bool, m_bClientside, "m_bClientside", "C_EconEntity", "client.dll");
 	SCHEMA(bool, m_bParticleSystemsCreated, "m_bParticleSystemsCreated", "C_EconEntity", "client.dll");
 	SCHEMA(CUtlVector< int32 >, m_vecAttachedParticles, "m_vecAttachedParticles", "C_EconEntity", "client.dll");
-	SCHEMA(CHandle, m_hViewmodelAttachment, "m_hViewmodelAttachment", "C_EconEntity", "client.dll");
+	SCHEMA(CHandle< CBaseAnimGraph >, m_hViewmodelAttachment, "m_hViewmodelAttachment", "C_EconEntity", "client.dll");
 	SCHEMA(int32, m_iOldTeam, "m_iOldTeam", "C_EconEntity", "client.dll");
 	SCHEMA(bool, m_bAttachmentDirty, "m_bAttachmentDirty", "C_EconEntity", "client.dll");
 	SCHEMA(int32, m_nUnloadedModelIndex, "m_nUnloadedModelIndex", "C_EconEntity", "client.dll");
 	SCHEMA(int32, m_iNumOwnerValidationRetries, "m_iNumOwnerValidationRetries", "C_EconEntity", "client.dll");
-	SCHEMA(CHandle, m_hOldProvidee, "m_hOldProvidee", "C_EconEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOldProvidee, "m_hOldProvidee", "C_EconEntity", "client.dll");
 };
 
 // Class: C_BasePlayerWeapon (Size: 0x1918)
@@ -3162,7 +3161,7 @@ public:
 	SCHEMA(bool, m_bUIWeapon, "m_bUIWeapon", "C_CSWeaponBase", "client.dll");
 	SCHEMA(int32, m_nCustomEconReloadEventId, "m_nCustomEconReloadEventId", "C_CSWeaponBase", "client.dll");
 	SCHEMA(GameTime_t, m_nextPrevOwnerUseTime, "m_nextPrevOwnerUseTime", "C_CSWeaponBase", "client.dll");
-	SCHEMA(CHandle, m_hPrevOwner, "m_hPrevOwner", "C_CSWeaponBase", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hPrevOwner, "m_hPrevOwner", "C_CSWeaponBase", "client.dll");
 	SCHEMA(GameTick_t, m_nDropTick, "m_nDropTick", "C_CSWeaponBase", "client.dll");
 	SCHEMA(bool, m_bWasActiveWeaponWhenDropped, "m_bWasActiveWeaponWhenDropped", "C_CSWeaponBase", "client.dll");
 	SCHEMA(bool, m_donated, "m_donated", "C_CSWeaponBase", "client.dll");
@@ -3194,7 +3193,7 @@ public:
 	SCHEMA(bool, m_bJustPulledPin, "m_bJustPulledPin", "C_BaseCSGrenade", "client.dll");
 	SCHEMA(GameTick_t, m_nNextHoldTick, "m_nNextHoldTick", "C_BaseCSGrenade", "client.dll");
 	SCHEMA(float32, m_flNextHoldFrac, "m_flNextHoldFrac", "C_BaseCSGrenade", "client.dll");
-	SCHEMA(CHandle, m_hSwitchToWeaponAfterThrow, "m_hSwitchToWeaponAfterThrow", "C_BaseCSGrenade", "client.dll");
+	SCHEMA(CHandle< C_CSWeaponBase >, m_hSwitchToWeaponAfterThrow, "m_hSwitchToWeaponAfterThrow", "C_BaseCSGrenade", "client.dll");
 };
 
 // Class: C_C4 (Size: 0x1FC0)
@@ -3286,8 +3285,8 @@ public:
 // Class: C_EntityFlame (Size: 0x640)
 class C_EntityFlame : public C_BaseEntity {
 public:
-	SCHEMA(CHandle, m_hEntAttached, "m_hEntAttached", "C_EntityFlame", "client.dll");
-	SCHEMA(CHandle, m_hOldAttached, "m_hOldAttached", "C_EntityFlame", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hEntAttached, "m_hEntAttached", "C_EntityFlame", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOldAttached, "m_hOldAttached", "C_EntityFlame", "client.dll");
 	SCHEMA(bool, m_bCheapEffect, "m_bCheapEffect", "C_EntityFlame", "client.dll");
 };
 
@@ -3519,7 +3518,7 @@ public:
 	SCHEMA(uint16, m_iInitialWindDir, "m_iInitialWindDir", "C_EnvWindShared", "client.dll");
 	SCHEMA(float32, m_flInitialWindSpeed, "m_flInitialWindSpeed", "C_EnvWindShared", "client.dll");
 	SCHEMA(Vector, m_location, "m_location", "C_EnvWindShared", "client.dll");
-	SCHEMA(CHandle, m_hEntOwner, "m_hEntOwner", "C_EnvWindShared", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hEntOwner, "m_hEntOwner", "C_EnvWindShared", "client.dll");
 };
 
 // Class: C_EnvWindVolume (Size: 0x630)
@@ -3587,7 +3586,7 @@ public:
 	SCHEMA(GameTick_t, m_nTransitionStartTick, "m_nTransitionStartTick", "C_FuncConveyor", "client.dll");
 	SCHEMA(int32, m_nTransitionDurationTicks, "m_nTransitionDurationTicks", "C_FuncConveyor", "client.dll");
 	SCHEMA(float32, m_flTransitionStartSpeed, "m_flTransitionStartSpeed", "C_FuncConveyor", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_hConveyorModels, "m_hConveyorModels", "C_FuncConveyor", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseEntity > >, m_hConveyorModels, "m_hConveyorModels", "C_FuncConveyor", "client.dll");
 	SCHEMA(float32, m_flCurrentConveyorOffset, "m_flCurrentConveyorOffset", "C_FuncConveyor", "client.dll");
 	SCHEMA(float32, m_flCurrentConveyorSpeed, "m_flCurrentConveyorSpeed", "C_FuncConveyor", "client.dll");
 };
@@ -3604,7 +3603,7 @@ public:
 class C_FuncLadder : public C_BaseModelEntity {
 public:
 	SCHEMA(Vector, m_vecLadderDir, "m_vecLadderDir", "C_FuncLadder", "client.dll");
-	SCHEMA(CUtlVector<CHandle>, m_Dismounts, "m_Dismounts", "C_FuncLadder", "client.dll");
+	SCHEMA(CUtlVector< CHandle< C_InfoLadderDismount > >, m_Dismounts, "m_Dismounts", "C_FuncLadder", "client.dll");
 	SCHEMA(Vector, m_vecLocalTop, "m_vecLocalTop", "C_FuncLadder", "client.dll");
 	SCHEMA(VectorWS, m_vecPlayerMountPositionTop, "m_vecPlayerMountPositionTop", "C_FuncLadder", "client.dll");
 	SCHEMA(VectorWS, m_vecPlayerMountPositionBottom, "m_vecPlayerMountPositionBottom", "C_FuncLadder", "client.dll");
@@ -3622,7 +3621,7 @@ public:
 	SCHEMA(bool, m_bRenderShadows, "m_bRenderShadows", "C_FuncMonitor", "client.dll");
 	SCHEMA(bool, m_bUseUniqueColorTarget, "m_bUseUniqueColorTarget", "C_FuncMonitor", "client.dll");
 	SCHEMA(CUtlString, m_brushModelName, "m_brushModelName", "C_FuncMonitor", "client.dll");
-	SCHEMA(CHandle, m_hTargetCamera, "m_hTargetCamera", "C_FuncMonitor", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hTargetCamera, "m_hTargetCamera", "C_FuncMonitor", "client.dll");
 	SCHEMA(bool, m_bEnabled, "m_bEnabled", "C_FuncMonitor", "client.dll");
 	SCHEMA(bool, m_bDraw3DSkybox, "m_bDraw3DSkybox", "C_FuncMonitor", "client.dll");
 };
@@ -3673,7 +3672,7 @@ public:
 // Class: C_HandleTest (Size: 0x600)
 class C_HandleTest : public C_BaseEntity {
 public:
-	SCHEMA(CHandle, m_Handle, "m_Handle", "C_HandleTest", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_Handle, "m_Handle", "C_HandleTest", "client.dll");
 	SCHEMA(bool, m_bSendHandle, "m_bSendHandle", "C_HandleTest", "client.dll");
 };
 
@@ -3681,14 +3680,14 @@ public:
 class C_Hostage : public C_BaseCombatCharacter {
 public:
 	SCHEMA(EntitySpottedState_t, m_entitySpottedState, "m_entitySpottedState", "C_Hostage", "client.dll");
-	SCHEMA(CHandle, m_leader, "m_leader", "C_Hostage", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_leader, "m_leader", "C_Hostage", "client.dll");
 	SCHEMA(CountdownTimer, m_reuseTimer, "m_reuseTimer", "C_Hostage", "client.dll");
 	SCHEMA(Vector, m_vel, "m_vel", "C_Hostage", "client.dll");
 	SCHEMA(bool, m_isRescued, "m_isRescued", "C_Hostage", "client.dll");
 	SCHEMA(bool, m_jumpedThisFrame, "m_jumpedThisFrame", "C_Hostage", "client.dll");
 	SCHEMA(int32, m_nHostageState, "m_nHostageState", "C_Hostage", "client.dll");
 	SCHEMA(bool, m_bHandsHaveBeenCut, "m_bHandsHaveBeenCut", "C_Hostage", "client.dll");
-	SCHEMA(CHandle, m_hHostageGrabber, "m_hHostageGrabber", "C_Hostage", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hHostageGrabber, "m_hHostageGrabber", "C_Hostage", "client.dll");
 	SCHEMA(GameTime_t, m_fLastGrabTime, "m_fLastGrabTime", "C_Hostage", "client.dll");
 	SCHEMA(Vector, m_vecGrabbedPos, "m_vecGrabbedPos", "C_Hostage", "client.dll");
 	SCHEMA(GameTime_t, m_flRescueStartTime, "m_flRescueStartTime", "C_Hostage", "client.dll");
@@ -3746,8 +3745,8 @@ public:
 // Class: C_ItemDogtags (Size: 0x19E8)
 class C_ItemDogtags : public C_Item {
 public:
-	SCHEMA(CHandle, m_OwningPlayer, "m_OwningPlayer", "C_ItemDogtags", "client.dll");
-	SCHEMA(CHandle, m_KillingPlayer, "m_KillingPlayer", "C_ItemDogtags", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_OwningPlayer, "m_OwningPlayer", "C_ItemDogtags", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_KillingPlayer, "m_KillingPlayer", "C_ItemDogtags", "client.dll");
 };
 
 // Class: C_KeychainModule (Size: 0x1168)
@@ -3830,7 +3829,7 @@ public:
 // Class: C_Multimeter (Size: 0x1168)
 class C_Multimeter : public CBaseAnimGraph {
 public:
-	SCHEMA(CHandle, m_hTargetC4, "m_hTargetC4", "C_Multimeter", "client.dll");
+	SCHEMA(CHandle< C_PlantedC4 >, m_hTargetC4, "m_hTargetC4", "C_Multimeter", "client.dll");
 };
 
 // Class: C_NametagModule (Size: 0x1168)
@@ -3860,7 +3859,7 @@ public:
 	SCHEMA(float32, m_flPreSimTime, "m_flPreSimTime", "C_ParticleSystem", "client.dll");
 	SCHEMA(Vector*, m_vServerControlPoints, "m_vServerControlPoints", "C_ParticleSystem", "client.dll");
 	SCHEMA(uint8*, m_iServerControlPointAssignments, "m_iServerControlPointAssignments", "C_ParticleSystem", "client.dll");
-	SCHEMA(CHandle*, m_hControlPointEnts, "m_hControlPointEnts", "C_ParticleSystem", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >*, m_hControlPointEnts, "m_hControlPointEnts", "C_ParticleSystem", "client.dll");
 	SCHEMA(bool, m_bNoSave, "m_bNoSave", "C_ParticleSystem", "client.dll");
 	SCHEMA(bool, m_bNoFreeze, "m_bNoFreeze", "C_ParticleSystem", "client.dll");
 	SCHEMA(bool, m_bNoRamp, "m_bNoRamp", "C_ParticleSystem", "client.dll");
@@ -3908,7 +3907,7 @@ public:
 class C_PhysMagnet : public CBaseAnimGraph {
 public:
 	SCHEMA(CUtlVector< int32 >, m_aAttachedObjectsFromServer, "m_aAttachedObjectsFromServer", "C_PhysMagnet", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_aAttachedObjects, "m_aAttachedObjects", "C_PhysMagnet", "client.dll");
+	SCHEMA(CUtlVector< CHandle< C_BaseEntity > >, m_aAttachedObjects, "m_aAttachedObjects", "C_PhysMagnet", "client.dll");
 };
 
 // Class: C_PhysPropClientside (Size: 0x1330)
@@ -3948,12 +3947,12 @@ public:
 	SCHEMA(float32, m_flDefuseLength, "m_flDefuseLength", "C_PlantedC4", "client.dll");
 	SCHEMA(GameTime_t, m_flDefuseCountDown, "m_flDefuseCountDown", "C_PlantedC4", "client.dll");
 	SCHEMA(bool, m_bBombDefused, "m_bBombDefused", "C_PlantedC4", "client.dll");
-	SCHEMA(CHandle, m_hBombDefuser, "m_hBombDefuser", "C_PlantedC4", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hBombDefuser, "m_hBombDefuser", "C_PlantedC4", "client.dll");
 	SCHEMA(C_AttributeContainer, m_AttributeManager, "m_AttributeManager", "C_PlantedC4", "client.dll");
-	SCHEMA(CHandle, m_hDefuserMultimeter, "m_hDefuserMultimeter", "C_PlantedC4", "client.dll");
+	SCHEMA(CHandle< C_Multimeter >, m_hDefuserMultimeter, "m_hDefuserMultimeter", "C_PlantedC4", "client.dll");
 	SCHEMA(GameTime_t, m_flNextRadarFlashTime, "m_flNextRadarFlashTime", "C_PlantedC4", "client.dll");
 	SCHEMA(bool, m_bRadarFlash, "m_bRadarFlash", "C_PlantedC4", "client.dll");
-	SCHEMA(CHandle, m_pBombDefuser, "m_pBombDefuser", "C_PlantedC4", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_pBombDefuser, "m_pBombDefuser", "C_PlantedC4", "client.dll");
 	SCHEMA(GameTime_t, m_fLastDefuseTime, "m_fLastDefuseTime", "C_PlantedC4", "client.dll");
 	SCHEMA(CBasePlayerController*, m_pPredictionOwner, "m_pPredictionOwner", "C_PlantedC4", "client.dll");
 	SCHEMA(Vector, m_vecC4ExplodeSpectatePos, "m_vecC4ExplodeSpectatePos", "C_PlantedC4", "client.dll");
@@ -3964,8 +3963,8 @@ public:
 // Class: C_PlayerPing (Size: 0x648)
 class C_PlayerPing : public C_BaseEntity {
 public:
-	SCHEMA(CHandle, m_hPlayer, "m_hPlayer", "C_PlayerPing", "client.dll");
-	SCHEMA(CHandle, m_hPingedEntity, "m_hPingedEntity", "C_PlayerPing", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hPlayer, "m_hPlayer", "C_PlayerPing", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hPingedEntity, "m_hPingedEntity", "C_PlayerPing", "client.dll");
 	SCHEMA(int32, m_iType, "m_iType", "C_PlayerPing", "client.dll");
 	SCHEMA(bool, m_bUrgent, "m_bUrgent", "C_PlayerPing", "client.dll");
 	SCHEMA(char*, m_szPlaceName, "m_szPlaceName", "C_PlayerPing", "client.dll");
@@ -4043,7 +4042,7 @@ public:
 // Class: C_PointClientUIDialog (Size: 0xEE8)
 class C_PointClientUIDialog : public C_BaseClientUIEntity {
 public:
-	SCHEMA(CHandle, m_hActivator, "m_hActivator", "C_PointClientUIDialog", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hActivator, "m_hActivator", "C_PointClientUIDialog", "client.dll");
 	SCHEMA(bool, m_bStartEnabled, "m_bStartEnabled", "C_PointClientUIDialog", "client.dll");
 };
 
@@ -4128,7 +4127,7 @@ public:
 	SCHEMA(int32, m_iNodeNumber, "m_iNodeNumber", "C_PointCommentaryNode", "client.dll");
 	SCHEMA(int32, m_iNodeNumberMax, "m_iNodeNumberMax", "C_PointCommentaryNode", "client.dll");
 	SCHEMA(bool, m_bListenedTo, "m_bListenedTo", "C_PointCommentaryNode", "client.dll");
-	SCHEMA(CHandle, m_hViewPosition, "m_hViewPosition", "C_PointCommentaryNode", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hViewPosition, "m_hViewPosition", "C_PointCommentaryNode", "client.dll");
 	SCHEMA(bool, m_bRestartAfterRestore, "m_bRestartAfterRestore", "C_PointCommentaryNode", "client.dll");
 };
 
@@ -4139,14 +4138,14 @@ public:
 	SCHEMA(bool, m_bDisabledOld, "m_bDisabledOld", "C_PointValueRemapper", "client.dll");
 	SCHEMA(bool, m_bUpdateOnClient, "m_bUpdateOnClient", "C_PointValueRemapper", "client.dll");
 	SCHEMA(ValueRemapperInputType_t, m_nInputType, "m_nInputType", "C_PointValueRemapper", "client.dll");
-	SCHEMA(CHandle, m_hRemapLineStart, "m_hRemapLineStart", "C_PointValueRemapper", "client.dll");
-	SCHEMA(CHandle, m_hRemapLineEnd, "m_hRemapLineEnd", "C_PointValueRemapper", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hRemapLineStart, "m_hRemapLineStart", "C_PointValueRemapper", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hRemapLineEnd, "m_hRemapLineEnd", "C_PointValueRemapper", "client.dll");
 	SCHEMA(float32, m_flMaximumChangePerSecond, "m_flMaximumChangePerSecond", "C_PointValueRemapper", "client.dll");
 	SCHEMA(float32, m_flDisengageDistance, "m_flDisengageDistance", "C_PointValueRemapper", "client.dll");
 	SCHEMA(float32, m_flEngageDistance, "m_flEngageDistance", "C_PointValueRemapper", "client.dll");
 	SCHEMA(bool, m_bRequiresUseKey, "m_bRequiresUseKey", "C_PointValueRemapper", "client.dll");
 	SCHEMA(ValueRemapperOutputType_t, m_nOutputType, "m_nOutputType", "C_PointValueRemapper", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_hOutputEntities, "m_hOutputEntities", "C_PointValueRemapper", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseEntity > >, m_hOutputEntities, "m_hOutputEntities", "C_PointValueRemapper", "client.dll");
 	SCHEMA(ValueRemapperHapticsType_t, m_nHapticsType, "m_nHapticsType", "C_PointValueRemapper", "client.dll");
 	SCHEMA(ValueRemapperMomentumType_t, m_nMomentumType, "m_nMomentumType", "C_PointValueRemapper", "client.dll");
 	SCHEMA(float32, m_flMomentumModifier, "m_flMomentumModifier", "C_PointValueRemapper", "client.dll");
@@ -4219,7 +4218,7 @@ public:
 	SCHEMA(CUtlVector< Vector >, m_ragPos, "m_ragPos", "C_RagdollProp", "client.dll");
 	SCHEMA(CUtlVector< QAngle >, m_ragAngles, "m_ragAngles", "C_RagdollProp", "client.dll");
 	SCHEMA(float32, m_flBlendWeight, "m_flBlendWeight", "C_RagdollProp", "client.dll");
-	SCHEMA(CHandle, m_hRagdollSource, "m_hRagdollSource", "C_RagdollProp", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hRagdollSource, "m_hRagdollSource", "C_RagdollProp", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_iEyeAttachment, "m_iEyeAttachment", "C_RagdollProp", "client.dll");
 	SCHEMA(float32, m_flBlendWeightCurrent, "m_flBlendWeightCurrent", "C_RagdollProp", "client.dll");
 	SCHEMA(CUtlVector< int32 >, m_parentPhysicsBoneIndices, "m_parentPhysicsBoneIndices", "C_RagdollProp", "client.dll");
@@ -4252,7 +4251,7 @@ public:
 	SCHEMA(bool, m_bRoundInProgress, "m_bRoundInProgress", "C_RetakeGameRules", "client.dll");
 	SCHEMA(int32, m_iFirstSecondHalfRound, "m_iFirstSecondHalfRound", "C_RetakeGameRules", "client.dll");
 	SCHEMA(int32, m_iBombSite, "m_iBombSite", "C_RetakeGameRules", "client.dll");
-	SCHEMA(CHandle, m_hBombPlanter, "m_hBombPlanter", "C_RetakeGameRules", "client.dll");
+	SCHEMA(CHandle< C_CSPlayerPawn >, m_hBombPlanter, "m_hBombPlanter", "C_RetakeGameRules", "client.dll");
 };
 
 // Class: C_RopeKeyframe (Size: 0x1220)
@@ -4274,8 +4273,8 @@ public:
 	SCHEMA(float32, m_flScrollSpeed, "m_flScrollSpeed", "C_RopeKeyframe", "client.dll");
 	SCHEMA(uint16, m_RopeFlags, "m_RopeFlags", "C_RopeKeyframe", "client.dll");
 	SCHEMA(uint8, m_nSegments, "m_nSegments", "C_RopeKeyframe", "client.dll");
-	SCHEMA(CHandle, m_hStartPoint, "m_hStartPoint", "C_RopeKeyframe", "client.dll");
-	SCHEMA(CHandle, m_hEndPoint, "m_hEndPoint", "C_RopeKeyframe", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hStartPoint, "m_hStartPoint", "C_RopeKeyframe", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hEndPoint, "m_hEndPoint", "C_RopeKeyframe", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_iStartAttachment, "m_iStartAttachment", "C_RopeKeyframe", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_iEndAttachment, "m_iEndAttachment", "C_RopeKeyframe", "client.dll");
 	SCHEMA(uint8, m_Subdiv, "m_Subdiv", "C_RopeKeyframe", "client.dll");
@@ -4313,8 +4312,8 @@ public:
 	SCHEMA(float32, m_flForceClientTime, "m_flForceClientTime", "C_SceneEntity", "client.dll");
 	SCHEMA(uint16, m_nSceneStringIndex, "m_nSceneStringIndex", "C_SceneEntity", "client.dll");
 	SCHEMA(bool, m_bClientOnly, "m_bClientOnly", "C_SceneEntity", "client.dll");
-	SCHEMA(CHandle, m_hOwner, "m_hOwner", "C_SceneEntity", "client.dll");
-	SCHEMA(CUtlVector< CHandle >, m_hActorList, "m_hActorList", "C_SceneEntity", "client.dll");
+	SCHEMA(CHandle< C_BaseFlex >, m_hOwner, "m_hOwner", "C_SceneEntity", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BaseFlex > >, m_hActorList, "m_hActorList", "C_SceneEntity", "client.dll");
 	SCHEMA(bool, m_bWasPlaying, "m_bWasPlaying", "C_SceneEntity", "client.dll");
 	SCHEMA(float32, m_flCurrentTime, "m_flCurrentTime", "C_SceneEntity", "client.dll");
 };
@@ -4436,7 +4435,7 @@ public:
 // Class: C_Sprite (Size: 0xF28)
 class C_Sprite : public C_BaseModelEntity {
 public:
-	SCHEMA(CHandle, m_hAttachedToEntity, "m_hAttachedToEntity", "C_Sprite", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hAttachedToEntity, "m_hAttachedToEntity", "C_Sprite", "client.dll");
 	SCHEMA(AttachmentHandle_t, m_nAttachment, "m_nAttachment", "C_Sprite", "client.dll");
 	SCHEMA(float32, m_flSpriteFramerate, "m_flSpriteFramerate", "C_Sprite", "client.dll");
 	SCHEMA(float32, m_flFrame, "m_flFrame", "C_Sprite", "client.dll");
@@ -4469,8 +4468,8 @@ public:
 // Class: C_Team (Size: 0x6B0)
 class C_Team : public C_BaseEntity {
 public:
-	SCHEMA(CUtlVector<CHandle>, m_aPlayerControllers, "m_aPlayerControllers", "C_Team", "client.dll");
-	SCHEMA(CUtlVector<CHandle>, m_aPlayers, "m_aPlayers", "C_Team", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< CBasePlayerController > >, m_aPlayerControllers, "m_aPlayerControllers", "C_Team", "client.dll");
+	SCHEMA(C_NetworkUtlVectorBase< CHandle< C_BasePlayerPawn > >, m_aPlayers, "m_aPlayers", "C_Team", "client.dll");
 	SCHEMA(int32, m_iScore, "m_iScore", "C_Team", "client.dll");
 	SCHEMA(char*, m_szTeamname, "m_szTeamname", "C_Team", "client.dll");
 };
@@ -4571,7 +4570,7 @@ public:
 // Class: C_fogplayerparams_t (Size: 0x40)
 class C_fogplayerparams_t {
 public:
-	SCHEMA(CHandle, m_hCtrl, "m_hCtrl", "C_fogplayerparams_t", "client.dll");
+	SCHEMA(CHandle< C_FogController >, m_hCtrl, "m_hCtrl", "C_fogplayerparams_t", "client.dll");
 	SCHEMA(float32, m_flTransitionTime, "m_flTransitionTime", "C_fogplayerparams_t", "client.dll");
 	SCHEMA(Color, m_OldColor, "m_OldColor", "C_fogplayerparams_t", "client.dll");
 	SCHEMA(float32, m_flOldStart, "m_flOldStart", "C_fogplayerparams_t", "client.dll");
@@ -4652,7 +4651,7 @@ public:
 class PhysicsRagdollPose_t {
 public:
 	SCHEMA(CUtlVector< CTransform >, m_Transforms, "m_Transforms", "PhysicsRagdollPose_t", "client.dll");
-	SCHEMA(CHandle, m_hOwner, "m_hOwner", "PhysicsRagdollPose_t", "client.dll");
+	SCHEMA(CHandle< C_BaseEntity >, m_hOwner, "m_hOwner", "PhysicsRagdollPose_t", "client.dll");
 	SCHEMA(bool, m_bSetFromDebugHistory, "m_bSetFromDebugHistory", "PhysicsRagdollPose_t", "client.dll");
 };
 
@@ -4803,4 +4802,7 @@ public:
 	SCHEMA(fogparams_t, fog, "fog", "sky3dparams_t", "client.dll");
 	SCHEMA(WorldGroupId_t, m_nWorldGroupID, "m_nWorldGroupID", "sky3dparams_t", "client.dll");
 };
+
+
+// client.dll::C_WeaponAWP : C_CSWeaponBaseGun : C_CSWeaponBase : C_BasePlayerWeapon : C_EconEntity : C_BaseFlex : CBaseAnimGraph : C_BaseModelEntity : C_BaseEntity
 }

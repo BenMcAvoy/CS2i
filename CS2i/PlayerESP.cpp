@@ -118,7 +118,7 @@ void PlayerESP::update(bool menuOpen) {
 
         auto& hPawn = con->m_hPlayerPawn();
         if (!hPawn.IsValid()) continue;
-        auto* playerPawn = CS2::Interfaces::GGameResourceService->m_pGameEntitySystem->Get<CS2::C_CSPlayerPawn>(hPawn);
+		auto* playerPawn = hPawn.Get();
         if (!playerPawn) continue;
 
         auto gsn = con->m_pGameSceneNode();
