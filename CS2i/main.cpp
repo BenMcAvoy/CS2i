@@ -12,7 +12,7 @@
 #include "Feature.h"
 #include "PlayerESP.h"
 #include "WeaponESP.h"
-#include "WorldTint.h"
+#include "Chams.h"
 #include "SchemaExplorer.h"
 
 DWORD WINAPI MainThread(LPVOID lpParam) {
@@ -34,7 +34,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
 
     std::vector<std::unique_ptr<Feature>> features;
 	features.push_back(std::make_unique<WeaponESP>());
-	features.push_back(std::make_unique<WorldTint>());
+	features.push_back(std::make_unique<Chams>());
 	features.push_back(std::make_unique<SchemaExplorer>());
 	features.push_back(std::make_unique<PlayerESP>()); // render last, nothing should overlay this
 

@@ -39,17 +39,42 @@ void WeaponESP::update(bool menuOpen) {
 
         // TODO: Lookup instead of string compare + clone
 
-        if (std::strncmp(designerName, "weapon_", 7) != 0)
-			continue;
-		designerName += 7;
+        bool valid = false;
+        bool skipOwned = true;
+        bool isSmokeGrenade = false;
 
-		std::string displayName = designerName;
-        for (auto& c : displayName)
+        std::string designerNameStr = designerName;
+
+		// if it starts with "weapon_"
+		if (designerNameStr.compare(0, 7, "weapon_") == 0) {
+			designerNameStr.erase(0, 7);
+			valid = true;
+        }
+
+        const std::string suffix = "projectile";
+
+        if (designerNameStr.size() > suffix.size() &&
+            designerNameStr.compare(designerNameStr.size() - suffix.size(), suffix.size(), suffix) == 0) {
+            designerNameStr.erase(designerNameStr.size() - (suffix.size() + 1));
+            valid = true;
+			skipOwned = false;
+			
+			// Check if it's a smoke grenade
+			if (designerNameStr == "smokegrenade") {
+				isSmokeGrenade = true;
+			}
+        }
+
+		if (!valid) continue;
+
+		auto& displayName = designerNameStr;
+
+		for (auto& c : displayName)
             c = std::toupper(c);
 
 		CS2::C_CSWeaponBaseGun* weapon = reinterpret_cast<CS2::C_CSWeaponBaseGun*>(baseEnt);
         auto whOwner = weapon->m_hOwnerEntity();
-        if (whOwner.IsValid()) {
+        if (skipOwned && whOwner.IsValid()) {
             continue;
         }
 
@@ -62,7 +87,37 @@ void WeaponESP::update(bool menuOpen) {
         ImVec2 screenPos;
         if (!W2S(screenPos, pos)) continue;
 
-		ImVec2 textSize = ImGui::CalcTextSize(displayName.c_str());
+		// For smoke grenades, add timer display
+		std::string finalDisplayText = displayName;
+		if (isSmokeGrenade) {
+			CS2::C_SmokeGrenadeProjectile* smokeGrenade = reinterpret_cast<CS2::C_SmokeGrenadeProjectile*>(baseEnt);
+			int32_t smokeEffectTickBegin = smokeGrenade->m_nSmokeEffectTickBegin();
+			bool didSmokeEffect = smokeGrenade->m_bDidSmokeEffect();
+			
+			if (didSmokeEffect && smokeEffectTickBegin > 0) {
+				auto* localPawn = localPlayer->m_hPawn().Get();
+				if (localPawn) {
+					int32_t currentTick = localPawn->m_nSimulationTick();
+					int32_t ticksElapsed = currentTick - smokeEffectTickBegin;
+					
+					// Smoke grenades last approximately 18.5 seconds (1152 ticks at 64 tick)
+					const float tickRate = 64.0f;
+					const float smokeDurationSeconds = 18.5f;
+					const int32_t smokeDurationTicks = static_cast<int32_t>(smokeDurationSeconds * tickRate);
+					
+					float timeElapsed = ticksElapsed / tickRate;
+					float timeRemaining = smokeDurationSeconds - timeElapsed;
+					
+					if (timeRemaining > 0.0f) {
+						char timeBuffer[32];
+						snprintf(timeBuffer, sizeof(timeBuffer), " (%.1fs)", timeRemaining);
+						finalDisplayText += timeBuffer;
+					}
+				}
+			}
+		}
+
+		ImVec2 textSize = ImGui::CalcTextSize(finalDisplayText.c_str());
         ImVec2 textPos = ImVec2(screenPos.x - textSize.x / 2, screenPos.y);
 
 		float alpha = 1.0f;
@@ -79,8 +134,8 @@ void WeaponESP::update(bool menuOpen) {
         );
         ImGui::GetBackgroundDrawList()->AddText(
             textPos,
-			IM_COL32(200, 200, 255, (int)(255 * alpha)),
-			displayName.c_str()
+			IM_COL32(255, 255, 255, (int)(255 * alpha)),
+			finalDisplayText.c_str()
         );
     }
 }

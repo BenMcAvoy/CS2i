@@ -529,6 +529,37 @@ namespace CS2 {
 	};
 
 	template <typename T>
+	class CStrongHandle {
+	public:
+		operator T* () const {
+			return binding ? (T*)(*binding) : nullptr;
+		}
+
+		T* operator->() const {
+			return binding ? (T*)(*binding) : nullptr;
+		}
+
+	private:
+		const void** binding;
+	};
+
+	struct KV3ID {
+		const char* name;
+		std::uint64_t unk0;
+		std::uint64_t unk1;
+	};
+
+	class CKeyValues3 {
+	private:
+		/* 0x000 */ char pad_0x000[0x100];
+	public:
+		/* 0x100 */ std::uint64_t key;
+		/* 0x108 */ void* pValue;
+	private:
+		/* 0x110 */ char pad_0x110[0x8];
+	};
+
+	template <typename T>
 	class C_NetworkUtlVectorBase {
 		// TODO: Implement..
 	};
@@ -1074,6 +1105,8 @@ namespace CS2 {
 		RIGHT_FOOT
 	};
 
+	class CMaterial2;
+	class CMeshData;
 
 #if 0
 	class CGameSceneNode {

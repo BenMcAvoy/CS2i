@@ -151,7 +151,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="WeaponESP.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayerESP.cpp" />
     <ClCompile Include="SchemaExplorer.cpp" />
@@ -162,10 +161,10 @@
     <ClCompile Include="vendor\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="WorldTint.cpp" />
+    <ClCompile Include="Chams.cpp" />
+    <ClCompile Include="WeaponESP.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="WeaponESP.h" />
     <ClInclude Include="Feature.h" />
     <ClInclude Include="PlayerESP.h" />
     <ClInclude Include="SchemaExplorer.h" />
@@ -181,7 +180,8 @@
     <ClInclude Include="vendor\imgui\imstb_rectpack.h" />
     <ClInclude Include="vendor\imgui\imstb_textedit.h" />
     <ClInclude Include="vendor\imgui\imstb_truetype.h" />
-    <ClInclude Include="WorldTint.h" />
+    <ClInclude Include="Chams.h" />
+    <ClInclude Include="WeaponESP.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
