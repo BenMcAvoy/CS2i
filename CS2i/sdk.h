@@ -77,6 +77,9 @@ namespace CS2 {
 		inline void* dwLocalPlayerPawn = reinterpret_cast<C_CSPlayerPawn**>(
 			(uintptr_t)GetModuleHandleA("client.dll") + 0x1BE7DA0
 			);
+		inline void* dwPlantedC4 = reinterpret_cast<void**>(
+			(uintptr_t)GetModuleHandleA("client.dll") + 0x1E30360
+			);
 	} // namespace Offsets
 
 	using DXGIPresentFn_t = HRESULT(__stdcall*)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
@@ -728,9 +731,9 @@ namespace CS2 {
 		}
 
 		template <typename T = void*>
-		static inline T* Capture(const CInterfaceRegister* pModuleRegister, const char* szInterfaceName) {
+		inline T* Capture(const char* szInterfaceName) const {
 			size_t nInterfaceNameLength = strlen(szInterfaceName);
-			for (const CInterfaceRegister* pRegister = pModuleRegister; pRegister != nullptr; pRegister = pRegister->pNext) {
+			for (const CInterfaceRegister* pRegister = this; pRegister != nullptr; pRegister = pRegister->pNext) {
 				size_t nRegisterNameLength = strlen(pRegister->szName);
 				if (strncmp(szInterfaceName, pRegister->szName, nInterfaceNameLength) == 0 &&
 					(nRegisterNameLength == nInterfaceNameLength ||
@@ -759,15 +762,15 @@ namespace CS2 {
 			const auto sceneRegisterList = CInterfaceRegister::GetRegisterList(L"scenesystem.dll");
 			success &= (sceneRegisterList != nullptr);
 
-			GEngineClient = CInterfaceRegister::Capture<IEngineClient>(engineRegisterList, "Source2EngineToClient001");
+			GEngineClient = engineRegisterList->Capture<IEngineClient>("Source2EngineToClient001");
 			success &= (GEngineClient != nullptr);
-			GSchemaSystem = CInterfaceRegister::Capture<ISchemaSystem>(scehemaRegisterList, "SchemaSystem_001");
+			GSchemaSystem = scehemaRegisterList->Capture<ISchemaSystem>("SchemaSystem_001");
 			success &= (GSchemaSystem != nullptr);
-			GGameResourceService = CInterfaceRegister::Capture<IGameResourceService>(engineRegisterList, "GameResourceServiceClientV001");
+			GGameResourceService = engineRegisterList->Capture<IGameResourceService>("GameResourceServiceClientV001");
 			success &= (GGameResourceService != nullptr);
-			GMatchmaking = CInterfaceRegister::Capture<IMatchmaking>(matchmakingRegisterList, "GameTypes001");
+			GMatchmaking = matchmakingRegisterList->Capture<IMatchmaking>("GameTypes001");
 			success &= (GMatchmaking != nullptr);
-			GSceneSystem = CInterfaceRegister::Capture<ISceneSystem>(sceneRegisterList, "SceneSystem_002");
+			GSceneSystem = sceneRegisterList->Capture<ISceneSystem>("SceneSystem_002");
 			success &= (GSceneSystem != nullptr);
 
 			// TODO: Set gTraceManager
